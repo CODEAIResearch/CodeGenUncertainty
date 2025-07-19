@@ -1,1 +1,87 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <title> Beyond Execution: Uncertainty Estimation and Abstention in LLM-Based Code Generation</title>
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bulma@0.9.4/css/bulma.min.css">
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+        }
+        figure {
+            display: block;
+            margin: 20px auto;
+            text-align: center;
+        }
+        figure img {
+            max-width: 80%;
+            height: auto;
+            border: 1px solid #ccc;
+            border-radius: 8px;
+        }
+        figcaption {
+            margin-top: 8px;
+            font-size: 0.9em;
+            color: #555;
+        }
+        .section-caption {
+            text-align: center;
+            font-weight: bold;
+            margin-top: 40px;
+            font-size: 1.5rem;
+        }
+    </style>
+</head>
 
+<body>
+    <header>
+        <h1 class="title is-3">Beyond Execution: Uncertainty Estimation and Abstention in LLM-Based Code Generation> </h1>
+    </header>
+    <!-- Abstract Section -->
+    <section class="section">
+        <div class="container is-max-desktop">
+            <div class="columns is-centered has-text-centered">
+                <div class="column is-four-fifths">
+                    <h2 class="title is-3">Abstract</h2>
+                    <div class="content has-text-justified">
+                        <p>
+                        Large language models (LLMs) are increasingly adopted for auto-
+mated code generation, assisting developers in writing programs
+from natural language descriptions. However, these models often
+produce outputs that appear plausible but contain subtle errors, pos-
+ing risks to software correctness and reliability. Existing validation
+methods, such as execution-based testing and program analysis
+tools, face practical limitations due to their reliance on test suites,
+computational cost, and incomplete coverage. These constraints
+make it difficult to proactively assess whether a given model output
+is likely to fail. </br>
+                            An alternative strategy is to assess the model’s internal signals
+to estimate the likelihood of failure before relying on post-hoc vali-
+dation. In this work, we conduct a systematic study of uncertainty
+estimation and selective abstention as model-intrinsic approaches
+for identifying unreliable outputs in code generation. We evalu-
+ate 16 uncertainty metrics across four benchmarks and two code
+generation models, encompassing 128 experimental configurations.
+Our evaluation spans both misprediction detection and abstention
+strategies. We find that information-theoretic metrics, particularly
+those based on sequence likelihood consistently outperform dis-
+tributional and sampling-based approaches. However, our study
+identifies that no single method generalizes reliably across models,
+datasets, and subjects highlighting the inherent difficulty of uncer-
+tainty estimation for code. Moreover, we observe that uncertainty
+signals over prompt (prefill) tokens offer limited predictive value
+with more informative signals arising during the generation phase.
+These findings reveal both the potential and the current limita-
+tions of uncertainty-based methods for improving the robustness
+of AI-assisted coding tools. Based on our results, we provide rec-
+ommendations for future research to advance uncertainty-aware
+techniques for reliable code generation.
+    </p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+  </body>
+</html>
