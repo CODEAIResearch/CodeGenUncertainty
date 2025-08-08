@@ -1,0 +1,9 @@
+metric_name,best_threshold,best_misprediction_percentage_base,best_mispredictions_count_base,best_total_samples_count_base,best_misprediction_percentage_plus,best_mispredictions_count_plus,best_total_samples_count_plus
+UMSP,1.0,59.756,98,164,65.244,107,164
+UPerp,5.918,65.672,44,67,71.264,62,87
+Entropy,1.215,62.393,73,117,67.925,72,106
+URD,9.565,61.765,63,102,67.647,69,102
+UFR,0.969,65.152,43,66,71.212,47,66
+TokenSAR,1.818,65.979,64,97,71.134,69,97
+UPMI,1.597,65.789,25,38,71.053,27,38
+UCPMI,0.0,0.0,0,0,0.0,0,0

@@ -1,0 +1,9 @@
+metric_name,base_status_auc,plus_status_auc,base_status_pr_auc,plus_status_pr_auc,base_status_brier_score,plus_status_brier_score,base_status_auarc,plus_status_auarc
+UMSP,0.5,0.5,0.259,0.339,0.415,0.378,0.19,0.248
+UPerp,0.555,0.583,0.31,0.423,0.741,0.661,0.258,0.337
+Entropy,0.547,0.573,0.302,0.416,0.455,0.411,0.213,0.282
+URD,0.439,0.415,0.238,0.309,0.741,0.661,0.258,0.337
+UFR,0.467,0.457,0.248,0.323,0.411,0.375,0.189,0.248
+TokenSAR,0.556,0.583,0.3,0.414,0.646,0.576,0.249,0.328
+UPMI,0.557,0.585,0.314,0.429,0.636,0.568,0.249,0.327
+UCPMI,,,,,0.0,0.0,0.0,0.0
