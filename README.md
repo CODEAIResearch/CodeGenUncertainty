@@ -6,13 +6,13 @@ Currently, we support code generation tasks using HumanEval, HumanEval+, MBPP, M
 
 ## To run uncertainty metrics on generated tokens:
 
-## 1. Go to ./CodeGen/provider/hf.py
-## 2. Uncomment line 104
+1. Go to ./CodeGen/provider/hf.py
+ 2. Uncomment line 104
 
 ## To run uncertainty metrics on generated tokens:
 
-## 1. Go to ./CodeGen/provider/hf.py
-## 2. Uncomment line 106
+ 1. Go to ./CodeGen/provider/hf.py
+2. Uncomment line 106
 
 ## Running metrics after uncommenting line 104 or 106 from the CodeGen folder run the follwing command, 
 
