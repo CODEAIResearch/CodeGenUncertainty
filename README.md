@@ -23,13 +23,17 @@ python ./evaluate.py \
     --greedy \
 
 "(model_name)" can be any HF model. E.g.: ./LLMs/CodeLlama_7b_Instruct_hf
+
 "(dataset)" can be either mbpp or humaneval
 
 ## Running evaluation: 
 
 Go to file: Change the path according to yours in CodeGen/compute_metrics.py (lines 15 and 16) and CodeGen/compute_abstaintion.py (lines 14 and 15)
+
 Then run: 
+
 python compute_metrics.py
+
 python compute_abstaintion.py 
 
 ## Note that this directory is supported to any code LLM used in HF.
