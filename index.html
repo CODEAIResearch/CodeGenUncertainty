@@ -200,6 +200,42 @@ tools. Based on our results, we provide recommendations for future research to a
     </div>
 </section>
 
+<section id="calibration-approaches" class="section">
+  <div class="container">
+    <h2 class="title is-4 section-caption">Calibration Approaches and Their Effects</h2>
+
+    <p>
+      <strong>Calibration objective.</strong> Post-hoc calibration adjusts raw uncertainty scores so that predicted
+      probabilities better align with empirical correctness likelihood. We evaluate two standard approaches:
+    </p>
+    <ul>
+      <li><strong>Platt scaling</strong> – logistic regression mapping from raw scores to calibrated probabilities.</li>
+      <li><strong>Isotonic regression</strong> – a non-parametric monotone mapping that preserves rank order but allows
+          flexible re-scaling.</li>
+    </ul>
+
+    <h3 class="title is-5" style="margin-top:1rem;">Observed results</h3>
+    <p>
+      Calibration leads to modest improvements in probability quality: the <em>Brier score</em> decreases by
+      approximately 1–3% across models and datasets. However, absolute values remain high, indicating that
+      confidence calibration is still challenging in code generation tasks.
+    </p>
+    <p>
+      Selective performance metrics—selective accuracy and risk across coverage—remain largely comparable to
+      pre-calibration values. <strong>MSP</strong> continues to perform robustly in all settings, with its ranking
+      power largely unaffected by calibration adjustments.
+    </p>
+
+    <h3 class="title is-5" style="margin-top:1rem;">Model-specific behavior</h3>
+    <p>
+      For <strong>DeepSeek</strong> models, alternative uncertainty metrics show slightly different responses:
+      <em>perplexity</em> and <em>entropy</em> exhibit some improvements in the low-coverage regime after calibration,
+      reflecting better discrimination of easy versus hard instances. These gains, however, are not sufficient to
+      surpass the overall stability of MSP, which remains the strongest baseline across all experiments.
+    </p>
+  </div>
+</section>
+
 <section id="after-calibration" class="section">
     <div class="container">
         <h2 class="title is-4 section-caption">Results of Accuracy-Risk Ratios After Calibration</h2>
