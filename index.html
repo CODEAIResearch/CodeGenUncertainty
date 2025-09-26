@@ -35,7 +35,7 @@
 
 <body>
     <header>
-        <h1 class="title is-3">Beyond Execution: Uncertainty Estimation and Abstention in LLM-Based Code Generation> </h1>
+        <h1 class="title is-3">Beyond Execution: Uncertainty Estimation and Abstention in LLM-Based Code Generation </h1>
     </header>
     <!-- Abstract Section -->
     <section class="section">
@@ -45,38 +45,18 @@
                     <h2 class="title is-3">Abstract</h2>
                     <div class="content has-text-justified">
                         <p>
-                        Large language models (LLMs) are increasingly adopted for auto-
-mated code generation, assisting developers in writing programs
-from natural language descriptions. However, these models often
-produce outputs that appear plausible but contain subtle errors, pos-
-ing risks to software correctness and reliability. Existing validation
-methods, such as execution-based testing and program analysis
-tools, face practical limitations due to their reliance on test suites,
-computational cost, and incomplete coverage. These constraints
-make it difficult to proactively assess whether a given model output
-is likely to fail. </br>
-                            An alternative strategy is to assess the model’s internal signals
-to estimate the likelihood of failure before relying on post-hoc vali-
-dation. In this work, we conduct a systematic study of uncertainty
-estimation and selective abstention as model-intrinsic approaches
-for identifying unreliable outputs in code generation. We evalu-
-ate 16 uncertainty metrics across four benchmarks and two code
-generation models, encompassing 128 experimental configurations.
-Our evaluation spans both misprediction detection and abstention
-strategies. We find that information-theoretic metrics, particularly
-those based on sequence likelihood consistently outperform dis-
-tributional and sampling-based approaches. However, our study
-identifies that no single method generalizes reliably across models,
-datasets, and subjects highlighting the inherent difficulty of uncer-
-tainty estimation for code. Moreover, we observe that uncertainty
-signals over prompt (prefill) tokens offer limited predictive value
-with more informative signals arising during the generation phase.
-These findings reveal both the potential and the current limita-
-tions of uncertainty-based methods for improving the robustness
-of AI-assisted coding tools. Based on our results, we provide rec-
-ommendations for future research to advance uncertainty-aware
-techniques for reliable code generation.
-    </p>
+                        Large language models (LLMs) are increasingly adopted for automated code generation, assisting developers in writing programs
+from natural language descriptions. However, these models often produce outputs that appear plausible but contain subtle errors, posing risks to software correctness and reliability. Existing validation
+methods, such as execution-based testing and program analysis tools, have not been successful due to a fundamental limitation: the lack of groundtruth, which prevents proactive assessment of
+whether a model output is likely to fail. </br>
+An alternative strategy is to assess the model’s internal signals to estimate the likelihood of failure before relying on post-hoc validation. In this work, we aim to systematically investigate uncertainty
+estimation for code generation by comparing different types of uncertainty signals, evaluating their effectiveness across models and tasks, and examining how signal timing—such as during prefill versus decoding—impacts predictive reliability. We evaluate 16 uncertainty metrics across four benchmarks and two models, covering 128 experimental settings. Our evaluation spans both misprediction detection and abstention strategies. </br>
+
+Our results highlight that information-theoretic metrics, such as sequence likelihood, consistently outperform more complex alternatives for identifying mispredictions. However, calibration remains
+weak, and no single metric generalizes across all settings. We further find that uncertainty measured during decoding provides more reliable signals than prefill uncertainty, underscoring the importance
+of modeling uncertainty over generated outputs. These findings reveal both the potential and the current limitations of uncertaintybased methods for improving the robustness of AI-assisted coding
+tools. Based on our results, we provide recommendations for future research to advance uncertainty-aware techniques for reliable code generation.
+</p>
                     </div>
                 </div>
             </div>
