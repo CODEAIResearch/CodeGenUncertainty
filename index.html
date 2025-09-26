@@ -63,5 +63,309 @@ tools. Based on our results, we provide recommendations for future research to a
         </div>
     </section>
 
+
+<section id="adaptive-abstention" class="section">
+  <div class="container">
+    <h2 class="title is-4 section-caption">Adaptive Abstention for Reliable Code Generation</h2>
+
+    <p>
+      <strong>Problem.</strong> Code generators often emit syntactically valid but semantically incorrect programs when
+      uncertainty rises mid-generation. Post-hoc rejection detects errors after the fact, but still wastes compute and
+      exposes users to low-quality drafts.
+    </p>
+    <p>
+      <strong>Definition.</strong> <em>Adaptive abstention</em> is an inference-time control policy that halts or defers
+      generation when a calibrated risk estimator signals insufficient reliability. Intervention occurs either
+      (i) <em>pre-fill</em>—before decoding any tokens—or (ii) <em>during decoding</em>—at token/block boundaries—thereby
+      preventing low-quality code from being produced.
+    </p>
+
+    <!-- Diagram (no download link) -->
+    <figure style="margin:1rem 0">
+      <img src="../technique_proposed.png"
+           alt="Inference-time feedback loop with clarification, retrieval/verification, and tool/static-analysis augmentation feeding an abstention decision"
+           style="width:100%;height:auto;border:0;">
+      <figcaption style="font-size:0.9rem;color:#666;">
+        Inference-time feedback loop. When reliability is low, the system routes to clarification, retrieval/verification,
+        or tool/static-analysis augmentation before deciding to resume or abstain.
+      </figcaption>
+    </figure>
+
+    <h3 class="title is-5" style="margin-top:1rem;">Pipeline: from signals to decisions</h3>
+    <p>
+      Let <code>x</code> be the task, <code>y<sub>t</sub></code> the partial hypothesis after decoding step <code>t</code>, and
+      <code>&#114;̂(x, t)</code> a calibrated risk estimate derived from logit-space features (e.g., energy, top-2 margin,
+      MSP), decoding dynamics, and external validation signals. Two gates implement early stopping:
+    </p>
+    <ol>
+      <li>
+        <strong>Pre-fill gate</strong> (<code>t = 0</code>). Compute <code>&#114;̂(x,0)</code> from the model’s pre-fill logits and prompt diagnostics.
+        If <code>&#114;̂(x,0) &gt; τ<sub>prefill</sub></code>, suspend decoding and trigger a <em>clarification</em> action
+        (missing constraints, I/O formats) via a structured query to the user. Otherwise, proceed to decoding.
+      </li>
+      <li>
+        <strong>Decode-time gate</strong> (token/block boundary <code>t &gt; 0</code>). Maintain a running estimate
+        <code>&#114;̂(x,t)</code> that aggregates: (a) logit-space risk; (b) decoding instability (likelihood dips, entropy spikes,
+        self-consistency disagreement); and (c) <em>validation signals</em> from lightweight tooling
+        (signature/schema checks, lints, static analysis, property tests). If <code>&#114;̂(x,t) &gt; τ<sub>decode</sub></code>, pause generation
+        and dispatch assistance actions; resume only if risk falls below threshold after assistance.
+      </li>
+    </ol>
+
+    <h3 class="title is-6" style="margin-top:0.75rem;">Assistance actions and MCP integration</h3>
+    <p>
+      Assistance actions are executed through <strong>MCP-compliant</strong> tool calls (Model Context Protocol) to ensure
+      standardized invocation, auditing, and reproducibility:
+    </p>
+    <ul>
+      <li><em>Clarify</em>: structured questions to the user to obtain missing task parameters.</li>
+      <li><em>Retrieve/verify</em>: constrained web/API lookups for API docs, version constraints, or examples; responses are
+          scored and fused into <code>&#114;̂(x,t)</code>.</li>
+      <li><em>Tool/static-analysis augmentation</em>: lints, type checks, import resolution, and sandboxed property tests that yield
+          intermediate pass/fail signals appended to the risk feature vector.</li>
+    </ul>
+    <p>
+      The decision policy <code>π</code> minimizes expected risk under a coverage constraint:
+      <code>π = argmin<sub>π</sub> 𝔼[ risk(y) · 𝟙{emit} + c<sub>abs</sub> · 𝟙{abstain} ]</code>
+      subject to <code>𝔼[𝟙{emit}] ≥ κ</code>, where <code>κ</code> is target coverage and <code>c<sub>abs</sub></code> is the abstention cost.
+      Thresholds <code>τ<sub>prefill</sub></code> and <code>τ<sub>decode</sub></code> are selected to satisfy the global coverage while maximizing selective accuracy.
+    </p>
+
+    <h3 class="title is-5" style="margin-top:1rem;">Scientific specification of the risk estimator</h3>
+    <p>
+      The estimator concatenates three families of features:
+      <em>(F1) Logit-space</em> = {energy, top-2 margin, MSP} possibly with class-conditional calibration;
+      <em>(F2) Dynamics</em> = {negative log-likelihood trend, entropy slope, self-consistency variance};
+      <em>(F3) Validation</em> = {lint/type-check pass rate, signature conformity, property-test outcomes, retrieval coverage}.
+      A lightweight logistic model <code>g(·)</code> (per predicted class) yields <code>&#114;̂(x,t) = g([F1,F2,F3])</code>.
+    </p>
+
+    <h3 class="title is-5" style="margin-top:1rem;">Preliminary Design Strategy — Key Takeaway</h3>
+    <div class="notification is-link" style="margin-top:0.5rem;">
+      <p style="margin-bottom:0.5rem;">
+        Implement <em>two calibrated gates</em>:pre-fill and decode-time are driven by a class-conditional risk estimator
+        that fuses logit, dynamic, and validation signals. On high risk:
+        (1) elicit missing constraints; (2) perform MCP-mediated retrieval/verification; (3) invoke static checks
+        and property tests. Resume decoding only if risk falls below the gate; otherwise emit a structured abstention
+        with the missing information and next steps. This policy reduces error exposure and compute waste while
+        preserving target coverage and improving selective accuracy.
+      </p>
+    </div>
+  </div>
+</section>
+
+
+
+<section id="accuracy-coverage" class="section">
+  <div class="container">
+    <h2 class="title is-4 section-caption">Accuracy–Coverage Curves and Their Interpretation</h2>
+
+    <p>
+      <strong>Definition.</strong> The <em>accuracy–coverage curve</em> (a.k.a. risk–coverage curve) evaluates selective prediction.
+      Let the base classifier attain accuracy <code>Acc<sub>base</sub></code> when all predictions are accepted
+      (<code>coverage = 1.0</code>). For a target coverage <code>κ ∈ [0,1]</code>, keep only the top <code>κ·N</code> examples ranked by a
+      confidence score (abstain on the rest). Measure <em>selective accuracy</em> on this accepted subset as
+      <code>Acc<sub>sel</sub>(κ)</code>, and define <em>risk</em> as <code>Risk(κ) = 1 − Acc<sub>sel</sub>(κ)</code>.
+    </p>
+
+    <h3 class="title is-5" style="margin-top:1rem;">Expected behavior across coverage levels</h3>
+    <ul>
+      <li><strong>Full coverage (<code>κ = 1.0</code>).</strong> <code>Acc<sub>sel</sub>(1.0) = Acc<sub>base</sub></code>; risk equals the raw error rate.</li>
+      <li><strong>Decreasing coverage.</strong> Removing low-confidence items should <em>monotonically</em> increase
+          <code>Acc<sub>sel</sub>(κ)</code> and decrease <code>Risk(κ)</code> if the ranking correlates with correctness.</li>
+      <li><strong>Low coverage regime.</strong> For small <code>κ</code> (e.g., &lt; 0.3), well-ranked scores should yield
+          near-perfect accuracy (risk → 0). Non-monotonicity indicates poor ranking power.</li>
+    </ul>
+
+    <h3 class="title is-5" style="margin-top:1rem;">Implications for our evaluation</h3>
+    <p>
+      The tables below report selective accuracy and risk for target coverages from 10% to 100%.
+      Overall, we expect accuracy↑ and risk↓ as coverage↓. In our results, <strong>MSP</strong>
+      most consistently matches this monotonic trend across settings, reflecting strong confidence–correctness alignment.
+    </p>
+    <p>
+      <strong>Per-model observation (e.g: DeepSeek).</strong> For the DeepSeek model, multiple 
+      information-theoretic approaches also exhibit the desired monotone behavior, and several
+      variance-based techniques follow reasonably good trends as well. This suggests that DeepSeek’s scoring geometry yields higher ranking fidelity for
+      both confidence magnitudes and dispersion cues than other models evaluated.
+    </p>
+  </div>
+</section>
+
+
+<section id="new-calibration" class="section">
+    <div class="container">
+        <h2 class="title is-4 section-caption">Results of Accuracy-Risk Ratios Before Calibration</h2>
+        <iframe src="new_calibration.html" style="width:100%; min-height:600px; border:none;"></iframe>
+    </div>
+</section>
+
+<section id="after-calibration" class="section">
+    <div class="container">
+        <h2 class="title is-4 section-caption">Results of Accuracy-Risk Ratios After Calibration</h2>
+        <iframe src="after_calibration.html" style="width:100%; min-height:600px; border:none;"></iframe>
+    </div>
+</section>
+
+
+
+
+<section id="reliability-methods"
+         style="font-family: ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial;
+                font-size: 0.92rem; line-height: 1.55; color:#1b1b1b;">
+  <div style="max-width: 920px; margin: 0 auto; padding: 1.25rem 1rem;">
+    <header style="text-align:center; margin-bottom: 0.75rem;"></header>
+      <h2 style="margin:0; font-size:1.45rem;">Post-Hoc Reliability Enhancements</h2>
+      <p style="margin:0.35rem 0 0; color:#666;">Lightweight, model-agnostic procedures operating on MSP and binary correctness only.</p>
+    </header>
+
+    <!-- Card: Weighted Platt -->
+    <article id="weighted-platt"
+             style="background:#fafafa; border:1px solid #eee; border-radius:12px; padding:1rem 1rem 0.85rem; margin-top:1rem;"></article>
+      <h3 style="margin:0 0 0.25rem; font-size:1.15rem;">1) Task-Specific Weighted Platt Calibration</h3>
+      <p style="margin:0.35rem 0 0.75rem;">
+        We transform each item’s MSP into a calibrated correctness probability using a
+        two-parameter logistic map. The fitting objective up-weights mispredictions so the calibrated probabilities
+        remain conservative when the raw score is confidently wrong. Estimation is performed out-of-fold to avoid
+        optimistic bias.
+      </p>
+
+      <div style="display:grid; grid-template-columns: 1fr 1fr; gap: 0.75rem; margin-bottom:0.75rem;">
+        <section>
+          <h4 style="margin:0 0 0.25rem; font-size:1.0rem;">Inputs & Mapping</h4>
+          <ul style="margin:0.25rem 0 0.35rem 1rem; color:#444;">
+            <li><strong>Inputs:</strong> MSP ∈ [0,1] and correctness label y ∈ {0,1}.</li>
+            <li><strong>Mapping:</strong> <code>p = sigmoid(a * MSP + b)</code> (monotone; preserves ranking).</li>
+            <li><strong>Asymmetry:</strong> errors receive higher weight to penalize overconfident mistakes.</li>
+          </ul>
+        </section>
+        <section>
+          <h4 style="margin:0 0 0.25rem; font-size:1.0rem;">Loss (asymmetric NLL)</h4>
+          <pre style="margin:0; background:#fff; border:1px solid #eee; border-radius:8px; padding:0.6rem; overflow:auto;"></pre>
+Given items i = 1..N, score s_i = MSP_i, label y_i ∈ {0,1}
+Weights: w(y_i) = 1   if y_i = 1
+                 = λ ≥ 1 if y_i = 0
+
+Minimize:
+  L(a,b) = (1/N) Σ_i  w(y_i) * [ - y_i * log p_i  - (1 - y_i) * log(1 - p_i) ]
+where p_i = sigmoid(a * s_i + b)
+          </pre>
+        </section>
+      </div>
+
+      <div style="display:grid; grid-template-columns: 1fr 1fr; gap: 0.75rem;">
+        <section>
+          <h4 style="margin:0 0 0.25rem; font-size:1.0rem;">Estimation (OOF)</h4>
+          <p style="margin:0;">
+            Use K-fold CV. For each fold k, fit (a,b) on K−1 folds and produce probabilities for the held-out fold.
+            Concatenate all folds → out-of-fold calibrated probabilities for every item.
+          </p>
+        </section>
+        <section>
+          <h4 style="margin:0 0 0.25rem; font-size:1.0rem;">This approach:</h4>
+          <ul style="margin:0.25rem 0 0.35rem 1rem; color:#444;">
+            <li>Repairs probability scale while preserving MSP ordering.</li>
+            <li>Directly reduces overconfident assignments on errors (λ &gt; 1).</li>
+            <li>Training-free; applicable to any single confidence score.</li>
+          </ul>
+        </section>
+      </div>
+
+    </article>
+
+    <!-- Card: Confidence-Profiled Policy -->
+    <article id="confidence-profiled-policy"
+             style="background:#fafafa; border:1px solid #eee; border-radius:12px; padding:1rem 1rem 0.85rem; margin-top:1rem;">
+      <h3 style="margin:0 0 0.25rem; font-size:1.15rem;">2) Confidence-Profiled Acceptance Policy</h3>
+      <p style="margin:0.35rem 0 0.75rem;">
+        Using only the calibrated probability, we derive an empirical reliability profile that links confidence to error rate.
+        Decisions are then made by traversing from high to low confidence while monitoring cumulative error, with optional
+        partial acceptance in a boundary region to satisfy a target risk.
+      </p>
+
+      <div style="display:grid; grid-template-columns: 1fr 1fr; gap: 0.75rem; margin-bottom:0.75rem;">
+        <section>
+          <h4 style="margin:0 0 0.25rem; font-size:1.0rem;">Profile Construction (OOF)</h4>
+          <ol style="margin:0.25rem 0 0.35rem 1rem; color:#444;">
+            <li><strong>Bin scores:</strong> partition confidence [0,1] into B bins on the outer-train folds.</li>
+            <li><strong>Estimate error:</strong> compute per-bin empirical error; assign these rates to the held-out fold.</li>
+            <li><strong>Monotone smoothing:</strong> enforce non-increasing error as confidence rises (cumulative minimum or isotonic).</li>
+          </ol>
+        </section>
+        <section>
+          <h4 style="margin:0 0 0.25rem; font-size:1.0rem;">Risk-Constrained Acceptance</h4>
+          <pre style="margin:0; background:#fff; border:1px solid #eee; border-radius:8px; padding:0.6rem; overflow:auto;">
+Inputs: calibrated p_i, bin-level error estimates r_hat(b), risk target ρ ∈ [0,1]
+Procedure:
+  1) Sort bins from high → low confidence.
+  2) Accept entire bin if new cumulative risk ≤ ρ.
+  3) If the next bin would exceed ρ, accept only the highest-p items within that bin
+     until the bound is met; reject all lower bins.
+          </pre>
+        </section>
+      </div>
+
+      <div style="display:grid; grid-template-columns: 1fr 1fr; gap: 0.75rem;">
+        <section>
+          <h4 style="margin:0 0 0.25rem; font-size:1.0rem;">Order Score for Curves</h4>
+          <p style="margin:0;">
+            For risk–coverage curves without fixing ρ, define an order score:
+            <code>q = −&nbsp;local_error_estimate(p) + ε·p</code> (tiny ε to break ties).
+            Sorting by <code>q</code> yields a reliability-aware ordering for
+            selective accuracy/risk at chosen coverages.
+          </p>
+        </section>
+        <section>
+          <h4 style="margin:0 0 0.25rem; font-size:1.0rem;">Design Rationale</h4>
+          <ul style="margin:0.25rem 0 0.35rem 1rem; color:#444;">
+            <li>Decisions reflect the model’s observed reliability across confidence levels.</li>
+            <li>Out-of-fold estimates prevent leakage when building the profile.</li>
+            <li>Partial acceptance gives fine-grained control of accuracy–coverage trade-offs.</li>
+            <li>No extra annotations, logits, or top-2 margins required.</li>
+          </ul>
+        </section>
+      </div>
+    </article>
+
+    <!-- Organized collapsible pseudocode -->
+    <details style="margin-top:0.85rem;">
+      <summary style="cursor:pointer; color:#333; font-weight:600;">Pseudocode (Click to Expand)</summary>
+      <div style="margin-top:0.5rem;">
+        <div style="display: flex; flex-wrap: wrap; gap: 1.5rem;">
+          <div style="flex: 1 1 320px; min-width: 280px;">
+            <h4 style="margin:0 0 0.25rem; font-size:1.05rem;">Weighted Platt (OOF)</h4>
+            <pre style="background:#f6f6f7; border:1px solid #eee; border-radius:10px; padding:0.75rem; overflow:auto;">
+for each fold k:
+    fit (a,b) on MSP,y from all folds except k using asymmetric NLL (λ on errors)
+    produce p for items in fold k via p = sigmoid(a * MSP + b)
+concatenate p across folds → calibrated probabilities
+            </pre>
+          </div>
+          <div style="flex: 1 1 320px; min-width: 280px;">
+            <h4 style="margin:0 0 0.25rem; font-size:1.05rem;">Confidence-Profiled Policy</h4>
+            <pre style="background:#f6f6f7; border:1px solid #eee; border-radius:10px; padding:0.75rem; overflow:auto;">
+for each fold k:
+    on training folds: bin p, compute error per bin, enforce monotonicity
+    on held-out fold: assign local error estimates r_hat by bin
+
+Ordering for curves:
+    q = − r_hat + ε·p
+
+Risk-targeted decision:
+    accept bins top-down while cumulative risk ≤ ρ
+    partially accept boundary bin if needed
+            </pre>
+          </div>
+        </div>
+      </div>
+    </details>
+  </div>
+</section>
+
+
+
+
   </body>
 </html>
+
+

@@ -1,0 +1,791 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>CodeLlama HumanEval Calibration</title>
+    <style>
+      :root {
+        --bg: #0b0f14;
+        --panel: #121822;
+        --text: #e6eef8;
+        --muted: #9fb3c8;
+        --border: #223047;
+        --row-alt: #111a29;
+      }
+      html, body { height: 100%; }
+      body {
+        margin: 0;
+        background: var(--bg);
+        color: var(--text);
+        font: 14px/1.5 system-ui, -apple-system, Segoe UI, Roboto, Ubuntu, Cantarell, Noto Sans, Arial, "Apple Color Emoji", "Segoe UI Emoji";
+      }
+      .wrap {
+        max-width: 1400px;
+        margin: 24px auto;
+        padding: 0 20px 48px;
+      }
+      header {
+        margin-bottom: 12px;
+      }
+      h1 {
+        font-size: 20px;
+        margin: 0 0 4px;
+        letter-spacing: 0.2px;
+      }
+      .meta { color: var(--muted); font-size: 12px; }
+      .panel {
+        background: rgba(18, 24, 34, 0.94);
+        border: 1px solid var(--border);
+        border-radius: 12px;
+        overflow: hidden;
+        box-shadow: 0 6px 28px rgba(0,0,0,0.28);
+      }
+      .table-wrap {
+        overflow: auto;
+        max-height: calc(100vh - 200px);
+      }
+      table {
+        width: 100%;
+        border-collapse: collapse;
+        font-variant-numeric: tabular-nums;
+        font-size: 12px;
+        position: relative;
+      }
+      table.mono {
+        font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", monospace;
+      }
+      thead tr { background: #101a2a; }
+      thead th {
+        position: sticky;
+        top: 0;
+        z-index: 2;
+        padding: 6px 8px;
+        border: 1px solid rgba(255,255,255,0.06);
+        color: var(--muted);
+        text-align: center;
+        font-weight: 600;
+        white-space: nowrap;
+      }
+      thead th.frozen {
+        left: 0;
+        z-index: 4;
+        background: #101a2a;
+        text-align: left;
+      }
+      thead th.frozen.split { left: 120px; }
+      thead th.frozen.k { left: 210px; text-align: right; }
+      thead th.frozen.coverage,
+      tbody td.frozen.coverage { min-width: 120px; }
+      thead th.frozen.split,
+      tbody td.frozen.split { min-width: 90px; }
+      thead th.frozen.k,
+      tbody td.frozen.k { min-width: 80px; }
+      tbody td {
+        padding: 4px 8px;
+        border: 1px solid rgba(255,255,255,0.04);
+      }
+      tbody td.number { text-align: right; }
+      tbody tr:nth-child(even) { background: var(--row-alt); }
+      tbody tr.cov-sep td { border-bottom: 2px solid var(--border); }
+      tbody td.frozen {
+        position: sticky;
+        background: rgba(15,23,36,0.98);
+        z-index: 1;
+      }
+      tbody td.frozen.coverage { left: 0; }
+      tbody td.frozen.split { left: 120px; }
+      tbody td.frozen.k { left: 210px; text-align: right; }
+      tbody td.frozen.coverage { left: 0; font-weight: 600; }
+      tbody td.frozen.split { left: 120px; text-transform: capitalize; color: var(--muted); }
+      tbody td.frozen.k { left: 210px; text-align: right; }
+      .legend {
+        margin-top: 10px;
+        color: var(--muted);
+        font-size: 12px;
+      }
+    </style>
+  </head>
+  <body>
+    <div class="wrap">
+
+      <header style="margin-top:28px;">
+      <h1>CodeLlama- HumanEval dataset</h1>
+    </header>
+      <div class="panel">
+        <div class="table-wrap">
+          <table id="calibration" class="mono"></table>
+        </div>
+      </div>
+    </div>
+
+    <script id="raw-data" type="application/json"></script>
+    <script>
+      (function loadData() {
+        const raw = `split\tcoverage_pct\tk\tMSP__PLATT_acc_pct\tMSP__PLATT_risk_pct\tMSP__ISOTONIC_acc_pct\tMSP__ISOTONIC_risk_pct\tUPerp__PLATT_acc_pct\tUPerp__PLATT_risk_pct\tUPerp__ISOTONIC_acc_pct\tUPerp__ISOTONIC_risk_pct\tCCP__PLATT_acc_pct\tCCP__PLATT_risk_pct\tCCP__ISOTONIC_acc_pct\tCCP__ISOTONIC_risk_pct\tEntropy__PLATT_acc_pct\tEntropy__PLATT_risk_pct\tEntropy__ISOTONIC_acc_pct\tEntropy__ISOTONIC_risk_pct\tTokenSAR__PLATT_acc_pct\tTokenSAR__PLATT_risk_pct\tTokenSAR__ISOTONIC_acc_pct\tTokenSAR__ISOTONIC_risk_pct\tUPMI__PLATT_acc_pct\tUPMI__PLATT_risk_pct\tUPMI__ISOTONIC_acc_pct\tUPMI__ISOTONIC_risk_pct\tUCPMI__PLATT_acc_pct\tUCPMI__PLATT_risk_pct\tUCPMI__ISOTONIC_acc_pct\tUCPMI__ISOTONIC_risk_pct\tURD__PLATT_acc_pct\tURD__PLATT_risk_pct\tURD__ISOTONIC_acc_pct\tURD__ISOTONIC_risk_pct\tUFR__PLATT_acc_pct\tUFR__PLATT_risk_pct\tUFR__ISOTONIC_acc_pct\tUFR__ISOTONIC_risk_pct\tUHS__PLATT_acc_pct\tUHS__PLATT_risk_pct\tUHS__ISOTONIC_acc_pct\tUHS__ISOTONIC_risk_pct\tUSE__PLATT_acc_pct\tUSE__PLATT_risk_pct\tUSE__ISOTONIC_acc_pct\tUSE__ISOTONIC_risk_pct\tUSENTSAR__PLATT_acc_pct\tUSENTSAR__PLATT_risk_pct\tUSENTSAR__ISOTONIC_acc_pct\tUSENTSAR__ISOTONIC_risk_pct\tSEMANTIC_SET__PLATT_acc_pct\tSEMANTIC_SET__PLATT_risk_pct\tSEMANTIC_SET__ISOTONIC_acc_pct\tSEMANTIC_SET__ISOTONIC_risk_pct\tEIGEN_UNCERTAINTY__PLATT_acc_pct\tEIGEN_UNCERTAINTY__PLATT_risk_pct\tEIGEN_UNCERTAINTY__ISOTONIC_acc_pct\tEIGEN_UNCERTAINTY__ISOTONIC_risk_pct\tLEXICAL_SIM__PLATT_acc_pct\tLEXICAL_SIM__PLATT_risk_pct\tLEXICAL_SIM__ISOTONIC_acc_pct\tLEXICAL_SIM__ISOTONIC_risk_pct\tBB_Label_Prob__PLATT_acc_pct\tBB_Label_Prob__PLATT_risk_pct\tBB_Label_Prob__ISOTONIC_acc_pct\tBB_Label_Prob__ISOTONIC_risk_pct\tBB_SEMANIC_Entropy__PLATT_acc_pct\tBB_SEMANIC_Entropy__PLATT_risk_pct\tBB_SEMANIC_Entropy__ISOTONIC_acc_pct\tBB_SEMANIC_Entropy__ISOTONIC_risk_pct
+base\t10\t16\t87.5\t12.5\t75.0\t25.0\t50.0\t50.0\t43.75\t56.25\t18.75\t81.25\t25.0\t75.0\t50.0\t50.0\t43.75\t56.25\t50.0\t50.0\t43.75\t56.25\t93.75\t6.25\t87.5\t12.5\t50.0\t50.0\t43.75\t56.25\t50.0\t50.0\t37.5\t62.5\t31.25\t68.75\t31.25\t68.75\t62.5\t37.5\t18.75\t81.25\t25.0\t75.0\t25.0\t75.0\t18.75\t81.25\t31.25\t68.75\t37.5\t62.5\t37.5\t62.5\t68.75\t31.25\t25.0\t75.0\t12.5\t87.5\t12.5\t87.5\t25.0\t75.0\t12.5\t87.5\t62.5\t37.5\t25.0\t75.0
+base\t20\t33\t63.64\t36.36\t81.82\t18.18\t57.58\t42.42\t51.52\t48.48\t24.24\t75.76\t33.33\t66.67\t54.55\t45.45\t45.45\t54.55\t57.58\t42.42\t54.55\t45.45\t78.79\t21.21\t78.79\t21.21\t57.58\t42.42\t57.58\t42.42\t63.64\t36.36\t33.33\t66.67\t42.42\t57.58\t33.33\t66.67\t51.52\t48.48\t27.27\t72.73\t36.36\t63.64\t30.3\t69.7\t39.39\t60.61\t30.3\t69.7\t30.3\t69.7\t30.3\t69.7\t54.55\t45.45\t30.3\t69.7\t36.36\t63.64\t36.36\t63.64\t27.27\t72.73\t27.27\t72.73\t51.52\t48.48\t33.33\t66.67
+base\t30\t49\t51.02\t48.98\t73.47\t26.53\t48.98\t51.02\t59.18\t40.82\t32.65\t67.35\t42.86\t57.14\t48.98\t51.02\t57.14\t42.86\t51.02\t48.98\t57.14\t42.86\t69.39\t30.61\t69.39\t30.61\t48.98\t51.02\t59.18\t40.82\t51.02\t48.98\t38.78\t61.22\t40.82\t59.18\t40.82\t59.18\t46.94\t53.06\t34.69\t65.31\t34.69\t65.31\t32.65\t67.35\t34.69\t65.31\t30.61\t69.39\t40.82\t59.18\t40.82\t59.18\t57.14\t42.86\t36.73\t63.27\t34.69\t65.31\t42.86\t57.14\t34.69\t65.31\t32.65\t67.35\t46.94\t53.06\t32.65\t67.35
+base\t40\t66\t48.48\t51.52\t62.12\t37.88\t51.52\t48.48\t56.06\t43.94\t33.33\t66.67\t39.39\t60.61\t46.97\t53.03\t53.03\t46.97\t48.48\t51.52\t54.55\t45.45\t59.09\t40.91\t56.06\t43.94\t48.48\t51.52\t57.58\t42.42\t51.52\t48.48\t36.36\t63.64\t46.97\t53.03\t39.39\t60.61\t45.45\t54.55\t31.82\t68.18\t37.88\t62.12\t36.36\t63.64\t36.36\t63.64\t33.33\t66.67\t37.88\t62.12\t37.88\t62.12\t48.48\t51.52\t34.85\t65.15\t39.39\t60.61\t42.42\t57.58\t36.36\t63.64\t34.85\t65.15\t45.45\t54.55\t33.33\t66.67
+base\t50\t82\t43.9\t56.1\t56.1\t43.9\t47.56\t52.44\t51.22\t48.78\t32.93\t67.07\t40.24\t59.76\t47.56\t52.44\t51.22\t48.78\t45.12\t54.88\t51.22\t48.78\t54.88\t45.12\t50.0\t50.0\t47.56\t52.44\t53.66\t46.34\t47.56\t52.44\t39.02\t60.98\t43.9\t56.1\t43.9\t56.1\t42.68\t57.32\t34.15\t65.85\t37.8\t62.2\t35.37\t64.63\t35.37\t64.63\t39.02\t60.98\t36.59\t63.41\t36.59\t63.41\t42.68\t57.32\t36.59\t63.41\t40.24\t59.76\t40.24\t59.76\t36.59\t63.41\t36.59\t63.41\t43.9\t56.1\t34.15\t65.85
+base\t60\t98\t40.82\t59.18\t52.04\t47.96\t43.88\t56.12\t48.98\t51.02\t35.71\t64.29\t38.78\t61.22\t45.92\t54.08\t50.0\t50.0\t44.9\t55.1\t50.0\t50.0\t53.06\t46.94\t47.96\t52.04\t44.9\t55.1\t48.98\t51.02\t43.88\t56.12\t36.73\t63.27\t39.8\t60.2\t44.9\t55.1\t39.8\t60.2\t35.71\t64.29\t39.8\t60.2\t34.69\t65.31\t36.73\t63.27\t38.78\t61.22\t39.8\t60.2\t39.8\t60.2\t39.8\t60.2\t35.71\t64.29\t36.73\t63.27\t42.86\t57.14\t36.73\t63.27\t37.76\t62.24\t39.8\t60.2\t35.71\t64.29
+base\t70\t115\t42.61\t57.39\t46.09\t53.91\t40.0\t60.0\t47.83\t52.17\t39.13\t60.87\t39.13\t60.87\t46.09\t53.91\t45.22\t54.78\t40.0\t60.0\t47.83\t52.17\t47.83\t52.17\t45.22\t54.78\t40.0\t60.0\t46.09\t53.91\t42.61\t57.39\t38.26\t61.74\t41.74\t58.26\t42.61\t57.39\t38.26\t61.74\t36.52\t63.48\t38.26\t61.74\t34.78\t65.22\t38.26\t61.74\t40.0\t60.0\t39.13\t60.87\t39.13\t60.87\t41.74\t58.26\t37.39\t62.61\t36.52\t63.48\t43.48\t56.52\t38.26\t61.74\t37.39\t62.61\t38.26\t61.74\t36.52\t63.48
+base\t80\t131\t40.46\t59.54\t41.98\t58.02\t39.69\t60.31\t43.51\t56.49\t36.64\t63.36\t39.69\t60.31\t44.27\t55.73\t42.75\t57.25\t39.69\t60.31\t45.8\t54.2\t43.51\t56.49\t43.51\t56.49\t39.69\t60.31\t44.27\t55.73\t43.51\t56.49\t38.93\t61.07\t39.69\t60.31\t41.22\t58.78\t40.46\t59.54\t37.4\t62.6\t37.4\t62.6\t35.88\t64.12\t38.17\t61.83\t39.69\t60.31\t39.69\t60.31\t39.69\t60.31\t39.69\t60.31\t36.64\t63.36\t38.17\t61.83\t44.27\t55.73\t37.4\t62.6\t37.4\t62.6\t40.46\t59.54\t37.4\t62.6
+base\t90\t148\t40.54\t59.46\t40.54\t59.46\t43.24\t56.76\t41.22\t58.78\t38.51\t61.49\t39.86\t60.14\t41.89\t58.11\t41.22\t58.78\t43.24\t56.76\t41.89\t58.11\t41.89\t58.11\t41.89\t58.11\t43.24\t56.76\t41.22\t58.78\t41.89\t58.11\t38.51\t61.49\t39.86\t60.14\t40.54\t59.46\t40.54\t59.46\t37.16\t62.84\t38.51\t61.49\t37.16\t62.84\t39.19\t60.81\t39.19\t60.81\t38.51\t61.49\t38.51\t61.49\t39.86\t60.14\t37.84\t62.16\t40.54\t59.46\t41.22\t58.78\t38.51\t61.49\t37.84\t62.16\t40.54\t59.46\t37.16\t62.84
+plus\t10\t16\t62.5\t37.5\t87.5\t12.5\t56.25\t43.75\t37.5\t62.5\t50.0\t50.0\t43.75\t56.25\t43.75\t56.25\t31.25\t68.75\t56.25\t43.75\t43.75\t56.25\t75.0\t25.0\t75.0\t25.0\t56.25\t43.75\t37.5\t62.5\t56.25\t43.75\t25.0\t75.0\t43.75\t56.25\t37.5\t62.5\t37.5\t62.5\t12.5\t87.5\t31.25\t68.75\t37.5\t62.5\t37.5\t62.5\t31.25\t68.75\t31.25\t68.75\t25.0\t75.0\t31.25\t68.75\t6.25\t93.75\t31.25\t68.75\t37.5\t62.5\t37.5\t62.5\t31.25\t68.75\t43.75\t56.25\t12.5\t87.5
+plus\t20\t33\t42.42\t57.58\t69.7\t30.3\t36.36\t63.64\t54.55\t45.45\t36.36\t63.64\t36.36\t63.64\t39.39\t60.61\t45.45\t54.55\t39.39\t60.61\t54.55\t45.45\t66.67\t33.33\t66.67\t33.33\t39.39\t60.61\t54.55\t45.45\t39.39\t60.61\t27.27\t72.73\t30.3\t69.7\t39.39\t60.61\t39.39\t60.61\t18.18\t81.82\t42.42\t57.58\t42.42\t57.58\t30.3\t69.7\t27.27\t72.73\t33.33\t66.67\t18.18\t81.82\t36.36\t63.64\t27.27\t72.73\t30.3\t69.7\t36.36\t63.64\t30.3\t69.7\t30.3\t69.7\t42.42\t57.58\t18.18\t81.82
+plus\t30\t49\t38.78\t61.22\t59.18\t40.82\t38.78\t61.22\t53.06\t46.94\t32.65\t67.35\t36.73\t63.27\t42.86\t57.14\t46.94\t53.06\t38.78\t61.22\t53.06\t46.94\t61.22\t38.78\t61.22\t38.78\t40.82\t59.18\t53.06\t46.94\t44.9\t55.1\t34.69\t65.31\t36.73\t63.27\t38.78\t61.22\t38.78\t61.22\t28.57\t71.43\t38.78\t61.22\t36.73\t63.27\t32.65\t67.35\t30.61\t69.39\t36.73\t63.27\t30.61\t69.39\t40.82\t59.18\t30.61\t69.39\t30.61\t69.39\t34.69\t65.31\t42.86\t57.14\t30.61\t69.39\t36.73\t63.27\t26.53\t73.47
+plus\t40\t66\t34.85\t65.15\t48.48\t51.52\t37.88\t62.12\t45.45\t54.55\t31.82\t68.18\t33.33\t66.67\t39.39\t60.61\t40.91\t59.09\t37.88\t62.12\t45.45\t54.55\t51.52\t48.48\t46.97\t53.03\t37.88\t62.12\t45.45\t54.55\t39.39\t60.61\t31.82\t68.18\t33.33\t66.67\t37.88\t62.12\t40.91\t59.09\t25.76\t74.24\t40.91\t59.09\t37.88\t62.12\t33.33\t66.67\t31.82\t68.18\t33.33\t66.67\t33.33\t66.67\t31.82\t68.18\t33.33\t66.67\t36.36\t63.64\t40.91\t59.09\t30.3\t69.7\t40.91\t59.09\t27.27\t72.73
+plus\t50\t82\t39.02\t60.98\t47.56\t52.44\t36.59\t63.41\t41.46\t58.54\t32.93\t67.07\t34.15\t65.85\t39.02\t60.98\t42.68\t57.32\t36.59\t63.41\t41.46\t58.54\t46.34\t53.66\t40.24\t59.76\t36.59\t63.41\t41.46\t58.54\t36.59\t63.41\t34.15\t65.85\t39.02\t60.98\t36.59\t63.41\t34.15\t65.85\t26.83\t73.17\t39.02\t60.98\t36.59\t63.41\t34.15\t65.85\t30.49\t69.51\t39.02\t60.98\t39.02\t60.98\t37.8\t62.2\t35.37\t64.63\t32.93\t67.07\t37.8\t62.2\t37.8\t62.2\t31.71\t68.29\t34.15\t65.85\t29.27\t70.73
+plus\t60\t98\t34.69\t65.31\t44.9\t55.1\t33.67\t66.33\t42.86\t57.14\t35.71\t64.29\t33.67\t66.33\t39.8\t60.2\t44.9\t55.1\t33.67\t66.33\t43.88\t56.12\t42.86\t57.14\t39.8\t60.2\t33.67\t66.33\t41.84\t58.16\t35.71\t64.29\t32.65\t67.35\t33.67\t66.33\t33.67\t66.33\t32.65\t67.35\t30.61\t69.39\t34.69\t65.31\t35.71\t64.29\t32.65\t67.35\t33.67\t66.33\t33.67\t66.33\t33.67\t66.33\t32.65\t67.35\t29.59\t70.41\t36.73\t63.27\t35.71\t64.29\t30.61\t69.39\t32.65\t67.35\t29.59\t70.41
+plus\t70\t115\t36.52\t63.48\t40.0\t60.0\t36.52\t63.48\t40.0\t60.0\t36.52\t63.48\t33.04\t66.96\t40.0\t60.0\t40.0\t60.0\t37.39\t62.61\t40.0\t60.0\t41.74\t58.26\t38.26\t61.74\t36.52\t63.48\t40.0\t60.0\t37.39\t62.61\t33.91\t66.09\t33.04\t66.96\t35.65\t64.35\t34.78\t65.22\t29.57\t70.43\t34.78\t65.22\t33.04\t66.96\t29.57\t70.43\t32.17\t67.83\t34.78\t65.22\t33.91\t66.09\t34.78\t65.22\t33.04\t66.96\t31.3\t68.7\t37.39\t62.61\t33.91\t66.09\t31.3\t68.7\t35.65\t64.35\t29.57\t70.43
+plus\t80\t131\t35.11\t64.89\t37.4\t62.6\t38.17\t61.83\t37.4\t62.6\t34.35\t65.65\t34.35\t65.65\t38.93\t61.07\t37.4\t62.6\t38.17\t61.83\t37.4\t62.6\t38.93\t61.07\t39.69\t60.31\t38.17\t61.83\t38.17\t61.83\t38.93\t61.07\t32.06\t67.94\t34.35\t65.65\t36.64\t63.36\t35.11\t64.89\t31.3\t68.7\t35.11\t64.89\t32.82\t67.18\t30.53\t69.47\t32.82\t67.18\t34.35\t65.65\t32.06\t67.94\t38.17\t61.83\t33.59\t66.41\t34.35\t65.65\t38.17\t61.83\t35.88\t64.12\t32.06\t67.94\t35.88\t64.12\t31.3\t68.7
+plus\t90\t148\t36.49\t63.51\t35.14\t64.86\t37.16\t62.84\t35.81\t64.19\t33.78\t66.22\t34.46\t65.54\t35.81\t64.19\t35.81\t64.19\t37.16\t62.84\t35.14\t64.86\t37.16\t62.84\t37.16\t62.84\t37.16\t62.84\t35.81\t64.19\t37.16\t62.84\t33.78\t66.22\t35.14\t64.86\t36.49\t63.51\t35.81\t64.19\t33.11\t66.89\t33.11\t66.89\t33.11\t66.89\t33.11\t66.89\t32.43\t67.57\t33.78\t66.22\t34.46\t65.54\t36.49\t63.51\t32.43\t67.57\t35.14\t64.86\t35.14\t64.86\t34.46\t65.54\t31.08\t68.92\t35.14\t64.86\t32.43\t67.57`;
+        const lines = raw.trim().split(/\n+/);
+        const header = lines.shift().split('\t');
+        const rows = lines.map(line => {
+          const parts = line.split('\t');
+          const obj = {};
+          header.forEach((key, idx) => {
+            const val = parts[idx];
+            if (key === 'split') obj[key] = val;
+            else if (key === 'coverage_pct' || key === 'k') obj[key] = Number(val);
+            else obj[key] = Number(val);
+          });
+          return obj;
+        });
+        document.getElementById('raw-data').textContent = JSON.stringify({ header, rows });
+      })();
+    </script>
+
+    <script>
+      (function buildTable() {
+        const payload = JSON.parse(document.getElementById('raw-data').textContent);
+        const rows = payload.rows;
+        const header = payload.header;
+
+        const metricKeys = header.slice(3);
+        const metrics = [];
+        const calibrationsSet = new Set();
+        metricKeys.forEach(key => {
+          const match = key.match(/(.+?)__([^_]+)_(acc|risk)_pct$/i);
+          if (!match) return;
+          const metric = match[1];
+          const calib = match[2].toUpperCase();
+          if (!metrics.includes(metric)) metrics.push(metric);
+          calibrationsSet.add(calib);
+        });
+
+        const calibrations = Array.from(calibrationsSet).sort((a, b) => {
+          if (a === 'PLATT') return -1;
+          if (b === 'PLATT') return 1;
+          return a.localeCompare(b);
+        });
+        const table = document.getElementById('calibration');
+        const thead = document.createElement('thead');
+        const top = document.createElement('tr');
+        ['coverage_pct', 'split', 'k'].forEach((label, idx) => {
+          const th = document.createElement('th');
+          th.textContent = label;
+          th.classList.add('frozen');
+          if (idx === 0) th.classList.add('coverage');
+          if (idx === 1) th.classList.add('split');
+          if (idx === 2) th.classList.add('k');
+          th.rowSpan = 3;
+          th.style.textTransform = 'none';
+          top.appendChild(th);
+        });
+        metrics.forEach(metric => {
+          const th = document.createElement('th');
+          th.textContent = metric.replace(/_/g, ' ');
+          th.colSpan = calibrations.length * 2;
+          top.appendChild(th);
+        });
+        thead.appendChild(top);
+
+        const mid = document.createElement('tr');
+        metrics.forEach(metric => {
+          calibrations.forEach(calib => {
+            const th = document.createElement('th');
+            th.textContent = calib;
+            th.colSpan = 2;
+            mid.appendChild(th);
+          });
+        });
+        thead.appendChild(mid);
+
+        const bottom = document.createElement('tr');
+        metrics.forEach(() => {
+          calibrations.forEach(() => {
+            ['accuracy%', 'risk%'].forEach(label => {
+              const th = document.createElement('th');
+              th.textContent = label;
+              bottom.appendChild(th);
+            });
+          });
+        });
+        thead.appendChild(bottom);
+
+        table.appendChild(thead);
+
+        const coverageValues = [...new Set(rows.map(r => r.coverage_pct))].sort((a, b) => a - b);
+        const splits = ['base', 'plus'];
+        const tbody = document.createElement('tbody');
+
+        function getValue(row, metric, calib, type) {
+          const key = `${metric}__${calib}_${type}_pct`;
+          return row[key] ?? '';
+        }
+
+        coverageValues.forEach(cov => {
+          splits.forEach((split, idx) => {
+            const row = rows.find(r => r.coverage_pct === cov && r.split === split);
+            if (!row) return;
+            const tr = document.createElement('tr');
+            if (idx === splits.length - 1) tr.classList.add('cov-sep');
+
+            if (idx === 0) {
+              const tdCov = document.createElement('td');
+              tdCov.textContent = cov;
+              tdCov.rowSpan = splits.length;
+              tdCov.classList.add('frozen', 'coverage');
+              tr.appendChild(tdCov);
+            }
+
+            const tdSplit = document.createElement('td');
+            tdSplit.textContent = split === 'base' ? 'Base' : 'Plus';
+            tdSplit.classList.add('frozen', 'split');
+            tr.appendChild(tdSplit);
+
+            const tdK = document.createElement('td');
+            tdK.textContent = row.k;
+            tdK.classList.add('number', 'frozen', 'k');
+            tr.appendChild(tdK);
+
+        metrics.forEach(metric => {
+          calibrations.forEach(calib => {
+            ['acc', 'risk'].forEach(kind => {
+              const td = document.createElement('td');
+              td.textContent = getValue(row, metric, calib, kind);
+              td.classList.add('number');
+              tr.appendChild(td);
+            });
+          });
+        });
+
+            tbody.appendChild(tr);
+          });
+        });
+
+        table.appendChild(tbody);
+      })();
+    </script>
+
+    <header style="margin-top:28px;">
+      <h1>CodeLlama- MBPP dataset</h1>
+    </header>
+    <div class="panel">
+      <div class="table-wrap">
+        <table id="calibration-mbpp" class="mono"></table>
+      </div>
+    </div>
+
+    <script id="raw-data-mbpp" type="application/json"></script>
+    <script>
+      (function loadDataMBPP() {
+        const raw = `split\tcoverage_pct\tk\tMSP__PLATT_acc_pct\tMSP__PLATT_risk_pct\tMSP__ISOTONIC_acc_pct\tMSP__ISOTONIC_risk_pct\tUPerp__PLATT_acc_pct\tUPerp__PLATT_risk_pct\tUPerp__ISOTONIC_acc_pct\tUPerp__ISOTONIC_risk_pct\tCCP__PLATT_acc_pct\tCCP__PLATT_risk_pct\tCCP__ISOTONIC_acc_pct\tCCP__ISOTONIC_risk_pct\tEntropy__PLATT_acc_pct\tEntropy__PLATT_risk_pct\tEntropy__ISOTONIC_acc_pct\tEntropy__ISOTONIC_risk_pct\tTokenSAR__PLATT_acc_pct\tTokenSAR__PLATT_risk_pct\tTokenSAR__ISOTONIC_acc_pct\tTokenSAR__ISOTONIC_risk_pct\tUPMI__PLATT_acc_pct\tUPMI__PLATT_risk_pct\tUPMI__ISOTONIC_acc_pct\tUPMI__ISOTONIC_risk_pct\tUCPMI__PLATT_acc_pct\tUCPMI__PLATT_risk_pct\tUCPMI__ISOTONIC_acc_pct\tUCPMI__ISOTONIC_risk_pct\tURD__PLATT_acc_pct\tURD__PLATT_risk_pct\tURD__ISOTONIC_acc_pct\tURD__ISOTONIC_risk_pct\tUFR__PLATT_acc_pct\tUFR__PLATT_risk_pct\tUFR__ISOTONIC_acc_pct\tUFR__ISOTONIC_risk_pct\tUHS__PLATT_acc_pct\tUHS__PLATT_risk_pct\tUHS__ISOTONIC_acc_pct\tUHS__ISOTONIC_risk_pct\tUSE__PLATT_acc_pct\tUSE__PLATT_risk_pct\tUSE__ISOTONIC_acc_pct\tUSE__ISOTONIC_risk_pct\tUSENTSAR__PLATT_acc_pct\tUSENTSAR__PLATT_risk_pct\tUSENTSAR__ISOTONIC_acc_pct\tUSENTSAR__ISOTONIC_risk_pct\tSEMANTIC_SET__PLATT_acc_pct\tSEMANTIC_SET__PLATT_risk_pct\tSEMANTIC_SET__ISOTONIC_acc_pct\tSEMANTIC_SET__ISOTONIC_risk_pct\tEIGEN_UNCERTAINTY__PLATT_acc_pct\tEIGEN_UNCERTAINTY__PLATT_risk_pct\tEIGEN_UNCERTAINTY__ISOTONIC_acc_pct\tEIGEN_UNCERTAINTY__ISOTONIC_risk_pct\tLEXICAL_SIM__PLATT_acc_pct\tLEXICAL_SIM__PLATT_risk_pct\tLEXICAL_SIM__ISOTONIC_acc_pct\tLEXICAL_SIM__ISOTONIC_risk_pct\tBB_Label_Prob__PLATT_acc_pct\tBB_Label_Prob__PLATT_risk_pct\tBB_Label_Prob__ISOTONIC_acc_pct\tBB_Label_Prob__ISOTONIC_risk_pct\tBB_SEMANIC_Entropy__PLATT_acc_pct\tBB_SEMANIC_Entropy__PLATT_risk_pct\tBB_SEMANIC_Entropy__ISOTONIC_acc_pct\tBB_SEMANIC_Entropy__ISOTONIC_risk_pct
+base\t10\t38\t76.32\t23.68\t78.95\t21.05\t47.37\t52.63\t60.53\t39.47\t52.63\t47.37\t57.89\t42.11\t55.26\t44.74\t55.26\t44.74\t57.89\t42.11\t68.42\t31.58\t73.68\t26.32\t71.05\t28.95\t47.37\t52.63\t60.53\t39.47\t50.0\t50.0\t50.0\t50.0\t52.63\t47.37\t50.0\t50.0\t42.11\t57.89\t42.11\t57.89\t73.68\t26.32\t71.05\t28.95\t50.0\t50.0\t63.16\t36.84\t50.0\t50.0\t50.0\t50.0\t55.26\t44.74\t47.37\t52.63\t55.26\t44.74\t47.37\t52.63\t60.53\t39.47\t50.0\t50.0\t42.11\t57.89\t39.47\t60.53
+base\t20\t76\t64.47\t35.53\t77.63\t22.37\t53.95\t46.05\t57.89\t42.11\t63.16\t36.84\t56.58\t43.42\t52.63\t47.37\t52.63\t47.37\t55.26\t44.74\t56.58\t43.42\t72.37\t27.63\t71.05\t28.95\t53.95\t46.05\t57.89\t42.11\t55.26\t44.74\t51.32\t48.68\t52.63\t47.37\t51.32\t48.68\t43.42\t56.58\t43.42\t56.58\t64.47\t35.53\t61.84\t38.16\t53.95\t46.05\t56.58\t43.42\t51.32\t48.68\t51.32\t48.68\t57.89\t42.11\t53.95\t46.05\t65.79\t34.21\t50.0\t50.0\t63.16\t36.84\t51.32\t48.68\t43.42\t56.58\t43.42\t56.58
+base\t30\t113\t56.64\t43.36\t69.91\t30.09\t52.21\t47.79\t53.98\t46.02\t60.18\t39.82\t59.29\t40.71\t56.64\t43.36\t50.44\t49.56\t53.98\t46.02\t55.75\t44.25\t71.68\t28.32\t69.03\t30.97\t52.21\t47.79\t53.98\t46.02\t54.87\t45.13\t50.44\t49.56\t53.1\t46.9\t49.56\t50.44\t47.79\t52.21\t46.9\t53.1\t63.72\t36.28\t58.41\t41.59\t61.95\t38.05\t56.64\t43.36\t51.33\t48.67\t51.33\t48.67\t52.21\t47.79\t53.1\t46.9\t62.83\t37.17\t51.33\t48.67\t61.95\t38.05\t51.33\t48.67\t48.67\t51.33\t48.67\t51.33
+base\t40\t151\t52.98\t47.02\t70.86\t29.14\t56.29\t43.71\t54.3\t45.7\t64.9\t35.1\t62.25\t37.75\t58.94\t41.06\t52.32\t47.68\t57.62\t42.38\t55.63\t44.37\t65.56\t34.44\t62.25\t37.75\t55.63\t44.37\t54.3\t45.7\t58.28\t41.72\t52.32\t47.68\t52.98\t47.02\t52.32\t47.68\t48.34\t51.66\t52.32\t47.68\t62.25\t37.75\t58.94\t41.06\t58.94\t41.06\t60.93\t39.07\t53.64\t46.36\t53.64\t46.36\t53.64\t46.36\t53.64\t46.36\t61.59\t38.41\t50.33\t49.67\t64.24\t35.76\t53.64\t46.36\t48.34\t51.66\t51.66\t48.34
+base\t50\t189\t58.73\t41.27\t70.37\t29.63\t58.2\t41.8\t55.03\t44.97\t64.02\t35.98\t62.96\t37.04\t58.73\t41.27\t54.5\t45.5\t58.73\t41.27\t56.08\t43.92\t62.96\t37.04\t60.85\t39.15\t58.2\t41.8\t55.03\t44.97\t58.2\t41.8\t53.97\t46.03\t51.32\t48.68\t53.44\t46.56\t49.74\t50.26\t55.56\t44.44\t60.32\t39.68\t58.2\t41.8\t59.79\t40.21\t58.2\t41.8\t51.32\t48.68\t51.32\t48.68\t55.56\t44.44\t50.79\t49.21\t62.96\t37.04\t51.32\t48.68\t61.9\t38.1\t51.32\t48.68\t49.74\t50.26\t55.56\t44.44
+base\t60\t227\t57.27\t42.73\t66.52\t33.48\t58.15\t41.85\t55.07\t44.93\t62.11\t37.89\t62.11\t37.89\t58.15\t41.85\t57.27\t42.73\t59.03\t40.97\t57.27\t42.73\t63.44\t36.56\t60.35\t39.65\t58.15\t41.85\t55.07\t44.93\t58.15\t41.85\t51.98\t48.02\t53.3\t46.7\t54.63\t45.37\t52.42\t47.58\t57.27\t42.73\t61.23\t38.77\t58.59\t41.41\t57.71\t42.29\t57.27\t42.73\t49.78\t50.22\t49.78\t50.22\t57.71\t42.29\t50.66\t49.34\t59.91\t40.09\t51.98\t48.02\t59.03\t40.97\t49.78\t50.22\t51.98\t48.02\t56.83\t43.17
+base\t70\t265\t56.98\t43.02\t63.77\t36.23\t58.49\t41.51\t56.6\t43.4\t61.51\t38.49\t61.51\t38.49\t56.98\t43.02\t56.98\t43.02\t58.49\t41.51\t58.49\t41.51\t61.51\t38.49\t60.75\t39.25\t57.74\t42.26\t56.98\t43.02\t57.74\t42.26\t51.7\t48.3\t54.34\t45.66\t55.47\t44.53\t51.7\t48.3\t53.96\t46.04\t60.0\t40.0\t58.49\t41.51\t57.36\t42.64\t56.98\t43.02\t50.94\t49.06\t50.94\t49.06\t56.98\t43.02\t51.32\t48.68\t58.11\t41.89\t52.45\t47.55\t57.36\t42.64\t50.94\t49.06\t51.7\t48.3\t54.72\t45.28
+base\t80\t302\t56.62\t43.38\t60.93\t39.07\t56.95\t43.05\t57.28\t42.72\t57.28\t42.72\t57.62\t42.38\t56.62\t43.38\t54.97\t45.03\t57.28\t42.72\t56.95\t43.05\t59.93\t40.07\t59.6\t40.4\t56.95\t43.05\t56.95\t43.05\t56.95\t43.05\t51.99\t48.01\t53.31\t46.69\t56.29\t43.71\t51.66\t48.34\t51.66\t48.34\t57.62\t42.38\t57.28\t42.72\t55.63\t44.37\t55.63\t44.37\t52.98\t47.02\t52.98\t47.02\t56.62\t43.38\t50.99\t49.01\t57.62\t42.38\t52.98\t47.02\t57.62\t42.38\t52.98\t47.02\t51.66\t48.34\t52.32\t47.68
+base\t90\t340\t55.29\t44.71\t57.06\t42.94\t55.0\t45.0\t54.12\t45.88\t56.76\t43.24\t56.47\t43.53\t55.0\t45.0\t53.24\t46.76\t54.41\t45.59\t55.0\t45.0\t57.94\t42.06\t57.65\t42.35\t54.12\t45.88\t54.71\t45.29\t54.71\t45.29\t52.94\t47.06\t52.65\t47.35\t55.0\t45.0\t52.35\t47.65\t52.06\t47.94\t55.59\t44.41\t55.0\t45.0\t53.82\t46.18\t53.82\t46.18\t52.94\t47.06\t52.94\t47.06\t55.0\t45.0\t52.35\t47.65\t55.29\t44.71\t52.35\t47.65\t55.29\t44.71\t52.94\t47.06\t52.35\t47.65\t52.06\t47.94
+plus\t10\t38\t57.89\t42.11\t65.79\t34.21\t50.0\t50.0\t60.53\t39.47\t47.37\t52.63\t44.74\t55.26\t55.26\t44.74\t42.11\t57.89\t55.26\t44.74\t47.37\t52.63\t63.16\t36.84\t55.26\t44.74\t47.37\t52.63\t57.89\t42.11\t52.63\t47.37\t39.47\t60.53\t39.47\t60.53\t47.37\t52.63\t44.74\t55.26\t42.11\t57.89\t71.05\t28.95\t55.26\t44.74\t55.26\t44.74\t52.63\t47.37\t50.0\t50.0\t50.0\t50.0\t44.74\t55.26\t36.84\t63.16\t60.53\t39.47\t50.0\t50.0\t57.89\t42.11\t50.0\t50.0\t42.11\t57.89\t42.11\t57.89
+plus\t20\t76\t44.74\t55.26\t67.11\t32.89\t56.58\t43.42\t52.63\t47.37\t51.32\t48.68\t48.68\t51.32\t53.95\t46.05\t50.0\t50.0\t57.89\t42.11\t59.21\t40.79\t65.79\t34.21\t63.16\t36.84\t53.95\t46.05\t51.32\t48.68\t57.89\t42.11\t42.11\t57.89\t44.74\t55.26\t47.37\t52.63\t46.05\t53.95\t44.74\t55.26\t64.47\t35.53\t60.53\t39.47\t55.26\t44.74\t50.0\t50.0\t44.74\t55.26\t46.05\t53.95\t44.74\t55.26\t46.05\t53.95\t60.53\t39.47\t46.05\t53.95\t61.84\t38.16\t43.42\t56.58\t46.05\t53.95\t42.11\t57.89
+plus\t30\t113\t53.98\t46.02\t67.26\t32.74\t54.87\t45.13\t50.44\t49.56\t49.56\t50.44\t46.9\t53.1\t53.1\t46.9\t53.1\t46.9\t55.75\t44.25\t53.1\t46.9\t61.06\t38.94\t60.18\t39.82\t53.98\t46.02\t50.44\t49.56\t53.1\t46.9\t43.36\t56.64\t42.48\t57.52\t46.02\t53.98\t48.67\t51.33\t45.13\t54.87\t58.41\t41.59\t58.41\t41.59\t55.75\t44.25\t56.64\t43.36\t46.9\t53.1\t46.9\t53.1\t45.13\t54.87\t43.36\t56.64\t55.75\t44.25\t46.9\t53.1\t57.52\t42.48\t46.9\t53.1\t47.79\t52.21\t44.25\t55.75
+plus\t40\t151\t49.67\t50.33\t63.58\t36.42\t52.32\t47.68\t48.34\t51.66\t51.66\t48.34\t50.33\t49.67\t51.66\t48.34\t54.3\t45.7\t54.3\t45.7\t50.99\t49.01\t58.28\t41.72\t57.62\t42.38\t51.66\t48.34\t48.34\t51.66\t53.64\t46.36\t43.05\t56.95\t45.7\t54.3\t45.7\t54.3\t50.99\t49.01\t46.36\t53.64\t57.62\t42.38\t56.95\t43.05\t53.64\t46.36\t52.98\t47.02\t47.02\t52.98\t49.67\t50.33\t46.36\t53.64\t43.05\t56.95\t58.28\t41.72\t49.67\t50.33\t54.97\t45.03\t47.02\t52.98\t50.33\t49.67\t48.34\t51.66
+plus\t50\t189\t50.26\t49.74\t62.96\t37.04\t51.85\t48.15\t48.68\t51.32\t53.44\t46.56\t50.79\t49.21\t53.44\t46.56\t52.38\t47.62\t51.32\t48.68\t50.26\t49.74\t57.14\t42.86\t55.56\t44.44\t51.32\t48.68\t48.15\t51.85\t52.91\t47.09\t45.5\t54.5\t45.5\t54.5\t46.56\t53.44\t48.68\t51.32\t49.21\t50.79\t54.5\t45.5\t55.03\t44.97\t52.38\t47.62\t51.85\t48.15\t45.5\t54.5\t49.74\t50.26\t47.09\t52.91\t43.92\t56.08\t53.97\t46.03\t49.74\t50.26\t53.97\t46.03\t45.5\t54.5\t49.21\t50.79\t48.15\t51.85
+plus\t60\t227\t47.14\t52.86\t57.27\t42.73\t50.22\t49.78\t48.02\t51.98\t51.98\t48.02\t51.1\t48.9\t50.22\t49.78\t50.66\t49.34\t51.1\t48.9\t49.78\t50.22\t55.07\t44.93\t55.95\t44.05\t49.34\t50.66\t48.46\t51.54\t50.66\t49.34\t45.37\t54.63\t45.81\t54.19\t45.81\t54.19\t48.46\t51.54\t49.34\t50.66\t53.74\t46.26\t53.3\t46.7\t51.1\t48.9\t49.78\t50.22\t45.81\t54.19\t47.58\t52.42\t46.7\t53.3\t44.05\t55.95\t53.3\t46.7\t47.58\t52.42\t51.1\t48.9\t45.81\t54.19\t48.02\t51.98\t48.46\t51.54
+plus\t70\t265\t47.92\t52.08\t56.6\t43.4\t50.94\t49.06\t49.06\t50.94\t51.32\t48.68\t49.43\t50.57\t49.43\t50.57\t49.43\t50.57\t50.94\t49.06\t50.57\t49.43\t54.34\t45.66\t54.72\t45.28\t50.19\t49.81\t48.68\t51.32\t50.19\t49.81\t44.53\t55.47\t45.28\t54.72\t46.79\t53.21\t46.79\t53.21\t46.42\t53.58\t53.58\t46.42\t52.08\t47.92\t50.57\t49.43\t50.19\t49.81\t44.53\t55.47\t46.79\t53.21\t46.79\t53.21\t44.15\t55.85\t50.19\t49.81\t46.79\t53.21\t50.57\t49.43\t45.28\t54.72\t46.42\t53.58\t46.42\t53.58
+plus\t80\t302\t46.03\t53.97\t53.31\t46.69\t47.68\t52.32\t48.01\t51.99\t48.68\t51.32\t48.34\t51.66\t48.34\t51.66\t48.68\t51.32\t48.01\t51.99\t47.68\t52.32\t50.99\t49.01\t50.99\t49.01\t47.35\t52.65\t48.01\t51.99\t48.34\t51.66\t45.7\t54.3\t46.03\t53.97\t46.36\t53.64\t44.37\t55.63\t44.37\t55.63\t50.33\t49.67\t49.67\t50.33\t49.67\t50.33\t49.34\t50.66\t46.03\t53.97\t46.03\t53.97\t46.03\t53.97\t44.7\t55.3\t49.01\t50.99\t46.03\t53.97\t50.33\t49.67\t45.36\t54.64\t44.37\t55.63\t44.7\t55.3
+plus\t90\t340\t48.82\t51.18\t48.53\t51.47\t46.18\t53.82\t45.88\t54.12\t48.53\t51.47\t48.82\t51.18\t45.88\t54.12\t45.59\t54.41\t46.18\t53.82\t45.88\t54.12\t49.12\t50.88\t49.41\t50.59\t45.88\t54.12\t45.59\t54.41\t45.88\t54.12\t45.88\t54.12\t45.29\t54.71\t47.35\t52.65\t45.59\t54.41\t45.0\t55.0\t46.76\t53.24\t47.35\t52.65\t46.47\t53.53\t47.35\t52.65\t46.18\t53.82\t46.18\t53.82\t47.06\t52.94\t45.29\t54.71\t47.65\t52.35\t46.18\t53.82\t47.35\t52.65\t46.47\t53.53\t45.29\t54.71\t45.0\t55.0`;        const lines = raw.trim().split(/\n+/);
+        const header = lines.shift().split('\t');
+        const rows = lines.map(line => {
+          const parts = line.split('\t');
+          const obj = {};
+          header.forEach((key, idx) => {
+            const val = parts[idx];
+            if (key === 'split') obj[key] = val;
+            else if (key === 'coverage_pct' || key === 'k') obj[key] = Number(val);
+            else obj[key] = Number(val);
+          });
+          return obj;
+        });
+        document.getElementById('raw-data-mbpp').textContent = JSON.stringify({ header, rows });
+      })();
+    </script>
+    <script>
+      (function buildTableMBPP() {
+        const payload = JSON.parse(document.getElementById('raw-data-mbpp').textContent);
+        const rows = payload.rows;
+        const header = payload.header;
+
+        const metricKeys = header.slice(3);
+        const metrics = [];
+        const calibrationsSet = new Set();
+        metricKeys.forEach(key => {
+          const match = key.match(/(.+?)__([^_]+)_(acc|risk)_pct$/i);
+          if (!match) return;
+          const metric = match[1];
+          const calib = match[2].toUpperCase();
+          if (!metrics.includes(metric)) metrics.push(metric);
+          calibrationsSet.add(calib);
+        });
+
+        const calibrations = Array.from(calibrationsSet).sort((a, b) => {
+          if (a === 'PLATT') return -1;
+          if (b === 'PLATT') return 1;
+          return a.localeCompare(b);
+        });
+        const table = document.getElementById('calibration-mbpp');
+        const thead = document.createElement('thead');
+        const top = document.createElement('tr');
+        ['coverage_pct', 'split', 'k'].forEach((label, idx) => {
+          const th = document.createElement('th');
+          th.textContent = label;
+          th.classList.add('frozen');
+          if (idx === 0) th.classList.add('coverage');
+          if (idx === 1) th.classList.add('split');
+          if (idx === 2) th.classList.add('k');
+          th.rowSpan = 3;
+          th.style.textTransform = 'none';
+          top.appendChild(th);
+        });
+        metrics.forEach(metric => {
+          const th = document.createElement('th');
+          th.textContent = metric.replace(/_/g, ' ');
+          th.colSpan = calibrations.length * 2;
+          top.appendChild(th);
+        });
+        thead.appendChild(top);
+
+        const mid = document.createElement('tr');
+        metrics.forEach(metric => {
+          calibrations.forEach(calib => {
+            const th = document.createElement('th');
+            th.textContent = calib;
+            th.colSpan = 2;
+            mid.appendChild(th);
+          });
+        });
+        thead.appendChild(mid);
+
+        const bottom = document.createElement('tr');
+        metrics.forEach(() => {
+          calibrations.forEach(() => {
+            ['accuracy%', 'risk%'].forEach(label => {
+              const th = document.createElement('th');
+              th.textContent = label;
+              bottom.appendChild(th);
+            });
+          });
+        });
+        thead.appendChild(bottom);
+
+        table.appendChild(thead);
+
+        const coverageValues = [...new Set(rows.map(r => r.coverage_pct))].sort((a, b) => a - b);
+        const splits = ['base', 'plus'];
+        const tbody = document.createElement('tbody');
+
+        function getValue(row, metric, calib, type) {
+          const key = `${metric}__${calib}_${type}_pct`;
+          return row[key] ?? '';
+        }
+
+        coverageValues.forEach(cov => {
+          splits.forEach((split, idx) => {
+            const row = rows.find(r => r.coverage_pct === cov && r.split === split);
+            if (!row) return;
+            const tr = document.createElement('tr');
+            if (idx === splits.length - 1) tr.classList.add('cov-sep');
+
+            if (idx === 0) {
+              const tdCov = document.createElement('td');
+              tdCov.textContent = cov;
+              tdCov.rowSpan = splits.length;
+              tdCov.classList.add('frozen', 'coverage');
+              tr.appendChild(tdCov);
+            }
+
+            const tdSplit = document.createElement('td');
+            tdSplit.textContent = split === 'base' ? 'Base' : 'Plus';
+            tdSplit.classList.add('frozen', 'split');
+            tr.appendChild(tdSplit);
+
+            const tdK = document.createElement('td');
+            tdK.textContent = row.k;
+            tdK.classList.add('number', 'frozen', 'k');
+            tr.appendChild(tdK);
+
+            metrics.forEach(metric => {
+              calibrations.forEach(calib => {
+                ['acc', 'risk'].forEach(kind => {
+                  const td = document.createElement('td');
+                  td.textContent = getValue(row, metric, calib, kind);
+                  td.classList.add('number');
+                  tr.appendChild(td);
+                });
+              });
+            });
+
+            tbody.appendChild(tr);
+          });
+        });
+
+        table.appendChild(tbody);
+      })();
+    </script>
+
+    <header style="margin-top:28px;">
+      <h1>DeepSeek-HumanEval dataset</h1>
+    </header>
+    <div class="panel">
+      <div class="table-wrap">
+        <table id="calibration-deepseek-he" class="mono"></table>
+      </div>
+    </div>
+
+    <script id="raw-data-deepseek-he" type="application/json"></script>
+    <script>
+      (function loadDataDeepseekHE() {
+        const raw = `split\tcoverage_pct\tk\tMSP__PLATT_acc_pct\tMSP__PLATT_risk_pct\tMSP__ISOTONIC_acc_pct\tMSP__ISOTONIC_risk_pct\tUPerp__PLATT_acc_pct\tUPerp__PLATT_risk_pct\tUPerp__ISOTONIC_acc_pct\tUPerp__ISOTONIC_risk_pct\tCCP__PLATT_acc_pct\tCCP__PLATT_risk_pct\tCCP__ISOTONIC_acc_pct\tCCP__ISOTONIC_risk_pct\tEntropy__PLATT_acc_pct\tEntropy__PLATT_risk_pct\tEntropy__ISOTONIC_acc_pct\tEntropy__ISOTONIC_risk_pct\tTokenSAR__PLATT_acc_pct\tTokenSAR__PLATT_risk_pct\tTokenSAR__ISOTONIC_acc_pct\tTokenSAR__ISOTONIC_risk_pct\tUPMI__PLATT_acc_pct\tUPMI__PLATT_risk_pct\tUPMI__ISOTONIC_acc_pct\tUPMI__ISOTONIC_risk_pct\tUCPMI__PLATT_acc_pct\tUCPMI__PLATT_risk_pct\tUCPMI__ISOTONIC_acc_pct\tUCPMI__ISOTONIC_risk_pct\tURD__PLATT_acc_pct\tURD__PLATT_risk_pct\tURD__ISOTONIC_acc_pct\tURD__ISOTONIC_risk_pct\tUFR__PLATT_acc_pct\tUFR__PLATT_risk_pct\tUFR__ISOTONIC_acc_pct\tUFR__ISOTONIC_risk_pct\tUHS__PLATT_acc_pct\tUHS__PLATT_risk_pct\tUHS__ISOTONIC_acc_pct\tUHS__ISOTONIC_risk_pct\tUSE__PLATT_acc_pct\tUSE__PLATT_risk_pct\tUSE__ISOTONIC_acc_pct\tUSE__ISOTONIC_risk_pct\tUSENTSAR__PLATT_acc_pct\tUSENTSAR__PLATT_risk_pct\tUSENTSAR__ISOTONIC_acc_pct\tUSENTSAR__ISOTONIC_risk_pct\tSEMANTIC_SET__PLATT_acc_pct\tSEMANTIC_SET__PLATT_risk_pct\tSEMANTIC_SET__ISOTONIC_acc_pct\tSEMANTIC_SET__ISOTONIC_risk_pct\tEIGEN_UNCERTAINTY__PLATT_acc_pct\tEIGEN_UNCERTAINTY__PLATT_risk_pct\tEIGEN_UNCERTAINTY__ISOTONIC_acc_pct\tEIGEN_UNCERTAINTY__ISOTONIC_risk_pct\tLEXICAL_SIM__PLATT_acc_pct\tLEXICAL_SIM__PLATT_risk_pct\tLEXICAL_SIM__ISOTONIC_acc_pct\tLEXICAL_SIM__ISOTONIC_risk_pct\tBB_Label_Prob__PLATT_acc_pct\tBB_Label_Prob__PLATT_risk_pct\tBB_Label_Prob__ISOTONIC_acc_pct\tBB_Label_Prob__ISOTONIC_risk_pct\tBB_SEMANIC_Entropy__PLATT_acc_pct\tBB_SEMANIC_Entropy__PLATT_risk_pct\tBB_SEMANIC_Entropy__ISOTONIC_acc_pct\tBB_SEMANIC_Entropy__ISOTONIC_risk_pct
+base\t10\t16\t87.5\t12.5\t87.5\t12.5\t81.25\t18.75\t87.5\t12.5\t68.75\t31.25\t62.5\t37.5\t87.5\t12.5\t93.75\t6.25\t81.25\t18.75\t87.5\t12.5\t68.75\t31.25\t75.0\t25.0\t81.25\t18.75\t87.5\t12.5\t81.25\t18.75\t62.5\t37.5\t75.0\t25.0\t68.75\t31.25\t75.0\t25.0\t87.5\t12.5\t93.75\t6.25\t93.75\t6.25\t81.25\t18.75\t75.0\t25.0\t68.75\t31.25\t68.75\t31.25\t81.25\t18.75\t81.25\t18.75\t75.0\t25.0\t75.0\t25.0\t87.5\t12.5\t75.0\t25.0\t75.0\t25.0\t87.5\t12.5
+base\t20\t33\t84.85\t15.15\t81.82\t18.18\t87.88\t12.12\t84.85\t15.15\t69.7\t30.3\t69.7\t30.3\t84.85\t15.15\t84.85\t15.15\t87.88\t12.12\t81.82\t18.18\t78.79\t21.21\t78.79\t21.21\t87.88\t12.12\t84.85\t15.15\t84.85\t15.15\t66.67\t33.33\t75.76\t24.24\t69.7\t30.3\t81.82\t18.18\t78.79\t21.21\t84.85\t15.15\t84.85\t15.15\t84.85\t15.15\t81.82\t18.18\t72.73\t27.27\t72.73\t27.27\t78.79\t21.21\t81.82\t18.18\t84.85\t15.15\t69.7\t30.3\t78.79\t21.21\t66.67\t33.33\t81.82\t18.18\t78.79\t21.21
+base\t30\t49\t83.67\t16.33\t85.71\t14.29\t83.67\t16.33\t81.63\t18.37\t69.39\t30.61\t71.43\t28.57\t89.8\t10.2\t79.59\t20.41\t83.67\t16.33\t83.67\t16.33\t77.55\t22.45\t83.67\t16.33\t83.67\t16.33\t81.63\t18.37\t87.76\t12.24\t71.43\t28.57\t75.51\t24.49\t75.51\t24.49\t77.55\t22.45\t77.55\t22.45\t85.71\t14.29\t81.63\t18.37\t87.76\t12.24\t85.71\t14.29\t73.47\t26.53\t73.47\t26.53\t75.51\t24.49\t83.67\t16.33\t87.76\t12.24\t75.51\t24.49\t85.71\t14.29\t67.35\t32.65\t77.55\t22.45\t77.55\t22.45
+base\t40\t66\t83.33\t16.67\t87.88\t12.12\t81.82\t18.18\t84.85\t15.15\t72.73\t27.27\t71.21\t28.79\t81.82\t18.18\t81.82\t18.18\t80.3\t19.7\t84.85\t15.15\t83.33\t16.67\t81.82\t18.18\t81.82\t18.18\t84.85\t15.15\t81.82\t18.18\t69.7\t30.3\t75.76\t24.24\t74.24\t25.76\t81.82\t18.18\t78.79\t21.21\t84.85\t15.15\t81.82\t18.18\t84.85\t15.15\t80.3\t19.7\t72.73\t27.27\t72.73\t27.27\t72.73\t27.27\t78.79\t21.21\t87.88\t12.12\t74.24\t25.76\t86.36\t13.64\t69.7\t30.3\t80.3\t19.7\t78.79\t21.21
+base\t50\t82\t78.05\t21.95\t84.15\t15.85\t76.83\t23.17\t81.71\t18.29\t73.17\t26.83\t74.39\t25.61\t79.27\t20.73\t82.93\t17.07\t78.05\t21.95\t82.93\t17.07\t81.71\t18.29\t84.15\t15.85\t76.83\t23.17\t81.71\t18.29\t80.49\t19.51\t70.73\t29.27\t78.05\t21.95\t76.83\t23.17\t78.05\t21.95\t79.27\t20.73\t84.15\t15.85\t81.71\t18.29\t81.71\t18.29\t79.27\t20.73\t74.39\t25.61\t74.39\t25.61\t74.39\t25.61\t78.05\t21.95\t87.8\t12.2\t73.17\t26.83\t84.15\t15.85\t73.17\t26.83\t78.05\t21.95\t79.27\t20.73
+base\t60\t98\t75.51\t24.49\t86.73\t13.27\t78.57\t21.43\t80.61\t19.39\t76.53\t23.47\t74.49\t25.51\t77.55\t22.45\t78.57\t21.43\t77.55\t22.45\t79.59\t20.41\t80.61\t19.39\t85.71\t14.29\t77.55\t22.45\t80.61\t19.39\t75.51\t24.49\t72.45\t27.55\t76.53\t23.47\t76.53\t23.47\t78.57\t21.43\t78.57\t21.43\t84.69\t15.31\t81.63\t18.37\t82.65\t17.35\t79.59\t20.41\t76.53\t23.47\t76.53\t23.47\t75.51\t24.49\t77.55\t22.45\t85.71\t14.29\t74.49\t25.51\t84.69\t15.31\t75.51\t24.49\t78.57\t21.43\t78.57\t21.43
+base\t70\t115\t77.39\t22.61\t83.48\t16.52\t75.65\t24.35\t80.0\t20.0\t77.39\t22.61\t75.65\t24.35\t78.26\t21.74\t77.39\t22.61\t75.65\t24.35\t78.26\t21.74\t80.0\t20.0\t84.35\t15.65\t75.65\t24.35\t80.0\t20.0\t76.52\t23.48\t74.78\t25.22\t76.52\t23.48\t76.52\t23.48\t78.26\t21.74\t77.39\t22.61\t83.48\t16.52\t83.48\t16.52\t80.87\t19.13\t79.13\t20.87\t76.52\t23.48\t76.52\t23.48\t75.65\t24.35\t76.52\t23.48\t83.48\t16.52\t73.91\t26.09\t83.48\t16.52\t76.52\t23.48\t78.26\t21.74\t78.26\t21.74
+base\t80\t131\t76.34\t23.66\t80.15\t19.85\t76.34\t23.66\t77.86\t22.14\t76.34\t23.66\t75.57\t24.43\t77.1\t22.9\t77.1\t22.9\t76.34\t23.66\t77.86\t22.14\t80.15\t19.85\t79.39\t20.61\t76.34\t23.66\t77.86\t22.14\t78.63\t21.37\t74.05\t25.95\t76.34\t23.66\t76.34\t23.66\t78.63\t21.37\t77.86\t22.14\t80.15\t19.85\t79.39\t20.61\t80.92\t19.08\t81.68\t18.32\t76.34\t23.66\t76.34\t23.66\t76.34\t23.66\t76.34\t23.66\t80.92\t19.08\t74.81\t25.19\t79.39\t20.61\t76.34\t23.66\t78.63\t21.37\t77.1\t22.9
+base\t90\t148\t78.38\t21.62\t78.38\t21.62\t77.03\t22.97\t77.03\t22.97\t76.35\t23.65\t75.68\t24.32\t78.38\t21.62\t76.35\t23.65\t77.03\t22.97\t77.03\t22.97\t79.05\t20.95\t77.7\t22.3\t77.03\t22.97\t77.03\t22.97\t77.7\t22.3\t75.68\t24.32\t77.03\t22.97\t75.68\t24.32\t77.03\t22.97\t79.05\t20.95\t79.05\t20.95\t77.7\t22.3\t80.41\t19.59\t79.73\t20.27\t75.68\t24.32\t75.68\t24.32\t76.35\t23.65\t75.68\t24.32\t80.41\t19.59\t75.0\t25.0\t77.7\t22.3\t75.68\t24.32\t77.03\t22.97\t78.38\t21.62
+plus\t10\t16\t81.25\t18.75\t75.0\t25.0\t81.25\t18.75\t87.5\t12.5\t62.5\t37.5\t68.75\t31.25\t87.5\t12.5\t93.75\t6.25\t81.25\t18.75\t93.75\t6.25\t62.5\t37.5\t81.25\t18.75\t81.25\t18.75\t87.5\t12.5\t81.25\t18.75\t62.5\t37.5\t75.0\t25.0\t50.0\t50.0\t68.75\t31.25\t68.75\t31.25\t87.5\t12.5\t81.25\t18.75\t81.25\t18.75\t81.25\t18.75\t62.5\t37.5\t62.5\t37.5\t68.75\t31.25\t68.75\t31.25\t75.0\t25.0\t75.0\t25.0\t81.25\t18.75\t62.5\t37.5\t68.75\t31.25\t75.0\t25.0
+plus\t20\t33\t84.85\t15.15\t75.76\t24.24\t84.85\t15.15\t81.82\t18.18\t66.67\t33.33\t63.64\t36.36\t87.88\t12.12\t81.82\t18.18\t84.85\t15.15\t84.85\t15.15\t72.73\t27.27\t72.73\t27.27\t84.85\t15.15\t81.82\t18.18\t84.85\t15.15\t60.61\t39.39\t72.73\t27.27\t66.67\t33.33\t72.73\t27.27\t75.76\t24.24\t81.82\t18.18\t75.76\t24.24\t84.85\t15.15\t84.85\t15.15\t63.64\t36.36\t57.58\t42.42\t69.7\t30.3\t72.73\t27.27\t78.79\t21.21\t69.7\t30.3\t81.82\t18.18\t57.58\t42.42\t75.76\t24.24\t75.76\t24.24
+plus\t30\t49\t81.63\t18.37\t75.51\t24.49\t81.63\t18.37\t83.67\t16.33\t73.47\t26.53\t67.35\t32.65\t81.63\t18.37\t79.59\t20.41\t81.63\t18.37\t83.67\t16.33\t73.47\t26.53\t75.51\t24.49\t83.67\t16.33\t83.67\t16.33\t81.63\t18.37\t65.31\t34.69\t73.47\t26.53\t61.22\t38.78\t73.47\t26.53\t73.47\t26.53\t79.59\t20.41\t75.51\t24.49\t83.67\t16.33\t81.63\t18.37\t65.31\t34.69\t63.27\t36.73\t69.39\t30.61\t75.51\t24.49\t83.67\t16.33\t69.39\t30.61\t75.51\t24.49\t63.27\t36.73\t73.47\t26.53\t73.47\t26.53
+plus\t40\t66\t72.73\t27.27\t80.3\t19.7\t74.24\t25.76\t83.33\t16.67\t72.73\t27.27\t69.7\t30.3\t80.3\t19.7\t75.76\t24.24\t74.24\t25.76\t81.82\t18.18\t78.79\t21.21\t75.76\t24.24\t74.24\t25.76\t83.33\t16.67\t77.27\t22.73\t69.7\t30.3\t66.67\t33.33\t65.15\t34.85\t77.27\t22.73\t74.24\t25.76\t80.3\t19.7\t75.76\t24.24\t78.79\t21.21\t75.76\t24.24\t69.7\t30.3\t69.7\t30.3\t66.67\t33.33\t74.24\t25.76\t83.33\t16.67\t72.73\t27.27\t77.27\t22.73\t69.7\t30.3\t77.27\t22.73\t75.76\t24.24
+plus\t50\t82\t70.73\t29.27\t78.05\t21.95\t73.17\t26.83\t76.83\t23.17\t70.73\t29.27\t71.95\t28.05\t75.61\t24.39\t73.17\t26.83\t74.39\t25.61\t76.83\t23.17\t76.83\t23.17\t78.05\t21.95\t73.17\t26.83\t76.83\t23.17\t75.61\t24.39\t68.29\t31.71\t65.85\t34.15\t68.29\t31.71\t71.95\t28.05\t76.83\t23.17\t79.27\t20.73\t76.83\t23.17\t80.49\t19.51\t75.61\t24.39\t71.95\t28.05\t68.29\t31.71\t68.29\t31.71\t73.17\t26.83\t80.49\t19.51\t68.29\t31.71\t80.49\t19.51\t68.29\t31.71\t71.95\t28.05\t76.83\t23.17
+plus\t60\t98\t70.41\t29.59\t80.61\t19.39\t71.43\t28.57\t73.47\t26.53\t69.39\t30.61\t72.45\t27.55\t75.51\t24.49\t71.43\t28.57\t71.43\t28.57\t73.47\t26.53\t73.47\t26.53\t77.55\t22.45\t71.43\t28.57\t73.47\t26.53\t72.45\t27.55\t70.41\t29.59\t69.39\t30.61\t68.37\t31.63\t72.45\t27.55\t77.55\t22.45\t80.61\t19.39\t78.57\t21.43\t76.53\t23.47\t76.53\t23.47\t69.39\t30.61\t69.39\t30.61\t69.39\t30.61\t66.33\t33.67\t80.61\t19.39\t69.39\t30.61\t79.59\t20.41\t69.39\t30.61\t72.45\t27.55\t75.51\t24.49
+plus\t70\t115\t71.3\t28.7\t79.13\t20.87\t70.43\t29.57\t70.43\t29.57\t70.43\t29.57\t71.3\t28.7\t71.3\t28.7\t68.7\t31.3\t69.57\t30.43\t71.3\t28.7\t72.17\t27.83\t79.13\t20.87\t69.57\t30.43\t70.43\t29.57\t72.17\t27.83\t69.57\t30.43\t69.57\t30.43\t66.96\t33.04\t73.91\t26.09\t73.91\t26.09\t79.13\t20.87\t77.39\t22.61\t78.26\t21.74\t78.26\t21.74\t71.3\t28.7\t71.3\t28.7\t68.7\t31.3\t67.83\t32.17\t78.26\t21.74\t72.17\t27.83\t79.13\t20.87\t71.3\t28.7\t73.91\t26.09\t73.04\t26.96
+plus\t80\t131\t70.23\t29.77\t74.81\t25.19\t70.99\t29.01\t69.47\t30.53\t70.23\t29.77\t71.76\t28.24\t69.47\t30.53\t69.47\t30.53\t70.99\t29.01\t70.23\t29.77\t72.52\t27.48\t73.28\t26.72\t70.99\t29.01\t69.47\t30.53\t69.47\t30.53\t70.23\t29.77\t70.23\t29.77\t67.94\t32.06\t73.28\t26.72\t72.52\t27.48\t75.57\t24.43\t74.81\t25.19\t77.1\t22.9\t75.57\t24.43\t70.23\t29.77\t70.23\t29.77\t70.23\t29.77\t67.18\t32.82\t77.1\t22.9\t70.23\t29.77\t75.57\t24.43\t70.23\t29.77\t73.28\t26.72\t71.76\t28.24
+plus\t90\t148\t70.95\t29.05\t71.62\t28.38\t69.59\t30.41\t70.27\t29.73\t70.27\t29.73\t69.59\t30.41\t70.95\t29.05\t70.95\t29.05\t70.27\t29.73\t70.27\t29.73\t70.95\t29.05\t71.62\t28.38\t70.27\t29.73\t70.27\t29.73\t70.27\t29.73\t69.59\t30.41\t70.27\t29.73\t68.92\t31.08\t72.3\t27.7\t72.3\t27.7\t72.97\t27.03\t70.27\t29.73\t72.97\t27.03\t72.97\t27.03\t69.59\t30.41\t69.59\t30.41\t69.59\t30.41\t69.59\t30.41\t73.65\t26.35\t68.92\t31.08\t72.3\t27.7\t69.59\t30.41\t71.62\t28.38\t72.3\t27.7`;        const lines = raw.trim().split(/\n+/);
+        const header = lines.shift().split('\t');
+        const rows = lines.map(line => {
+          const parts = line.split('\t');
+          const obj = {};
+          header.forEach((key, idx) => {
+            const val = parts[idx];
+            if (key === 'split') obj[key] = val;
+            else if (key === 'coverage_pct' || key === 'k') obj[key] = Number(val);
+            else obj[key] = Number(val);
+          });
+          return obj;
+        });
+        document.getElementById('raw-data-deepseek-he').textContent = JSON.stringify({ header, rows });
+      })();
+    </script>
+    <script>
+      (function buildTableDeepseekHE() {
+        const payload = JSON.parse(document.getElementById('raw-data-deepseek-he').textContent);
+        const rows = payload.rows;
+        const header = payload.header;
+
+        const metricKeys = header.slice(3);
+        const metrics = [];
+        const calibrationsSet = new Set();
+        metricKeys.forEach(key => {
+          const match = key.match(/(.+?)__([^_]+)_(acc|risk)_pct$/i);
+          if (!match) return;
+          const metric = match[1];
+          const calib = match[2].toUpperCase();
+          if (!metrics.includes(metric)) metrics.push(metric);
+          calibrationsSet.add(calib);
+        });
+
+        const calibrations = Array.from(calibrationsSet).sort((a, b) => {
+          if (a === 'PLATT') return -1;
+          if (b === 'PLATT') return 1;
+          return a.localeCompare(b);
+        });
+        const table = document.getElementById('calibration-deepseek-he');
+        const thead = document.createElement('thead');
+        const top = document.createElement('tr');
+        ['coverage_pct', 'split', 'k'].forEach((label, idx) => {
+          const th = document.createElement('th');
+          th.textContent = label;
+          th.classList.add('frozen');
+          if (idx === 0) th.classList.add('coverage');
+          if (idx === 1) th.classList.add('split');
+          if (idx === 2) th.classList.add('k');
+          th.rowSpan = 3;
+          th.style.textTransform = 'none';
+          top.appendChild(th);
+        });
+        metrics.forEach(metric => {
+          const th = document.createElement('th');
+          th.textContent = metric.replace(/_/g, ' ');
+          th.colSpan = calibrations.length * 2;
+          top.appendChild(th);
+        });
+        thead.appendChild(top);
+
+        const mid = document.createElement('tr');
+        metrics.forEach(metric => {
+          calibrations.forEach(calib => {
+            const th = document.createElement('th');
+            th.textContent = calib;
+            th.colSpan = 2;
+            mid.appendChild(th);
+          });
+        });
+        thead.appendChild(mid);
+
+        const bottom = document.createElement('tr');
+        metrics.forEach(() => {
+          calibrations.forEach(() => {
+            ['accuracy%', 'risk%'].forEach(label => {
+              const th = document.createElement('th');
+              th.textContent = label;
+              bottom.appendChild(th);
+            });
+          });
+        });
+        thead.appendChild(bottom);
+
+        table.appendChild(thead);
+
+        const coverageValues = [...new Set(rows.map(r => r.coverage_pct))].sort((a, b) => a - b);
+        const splits = ['base', 'plus'];
+        const tbody = document.createElement('tbody');
+
+        function getValue(row, metric, calib, type) {
+          const key = `${metric}__${calib}_${type}_pct`;
+          return row[key] ?? '';
+        }
+
+        coverageValues.forEach(cov => {
+          splits.forEach((split, idx) => {
+            const row = rows.find(r => r.coverage_pct === cov && r.split === split);
+            if (!row) return;
+            const tr = document.createElement('tr');
+            if (idx === splits.length - 1) tr.classList.add('cov-sep');
+
+            if (idx === 0) {
+              const tdCov = document.createElement('td');
+              tdCov.textContent = cov;
+              tdCov.rowSpan = splits.length;
+              tdCov.classList.add('frozen', 'coverage');
+              tr.appendChild(tdCov);
+            }
+
+            const tdSplit = document.createElement('td');
+            tdSplit.textContent = split === 'base' ? 'Base' : 'Plus';
+            tdSplit.classList.add('frozen', 'split');
+            tr.appendChild(tdSplit);
+
+            const tdK = document.createElement('td');
+            tdK.textContent = row.k;
+            tdK.classList.add('number', 'frozen', 'k');
+            tr.appendChild(tdK);
+
+            metrics.forEach(metric => {
+              calibrations.forEach(calib => {
+                ['acc', 'risk'].forEach(kind => {
+                  const td = document.createElement('td');
+                  td.textContent = getValue(row, metric, calib, kind);
+                  td.classList.add('number');
+                  tr.appendChild(td);
+                });
+              });
+            });
+
+            tbody.appendChild(tr);
+          });
+        });
+
+        table.appendChild(tbody);
+      })();
+    </script>
+
+    <header style="margin-top:28px;">
+      <h1>DeepSeek - MBPP dataset</h1>
+    </header>
+    <div class="panel">
+      <div class="table-wrap">
+        <table id="calibration-deepseek-mbpp" class="mono"></table>
+      </div>
+    </div>
+
+    <script id="raw-data-deepseek-mbpp" type="application/json"></script>
+    <script>
+      (function loadDataDeepseekMBPP() {
+        const raw = `split\tcoverage_pct\tk\tMSP__PLATT_acc_pct\tMSP__PLATT_risk_pct\tMSP__ISOTONIC_acc_pct\tMSP__ISOTONIC_risk_pct\tUPerp__PLATT_acc_pct\tUPerp__PLATT_risk_pct\tUPerp__ISOTONIC_acc_pct\tUPerp__ISOTONIC_risk_pct\tCCP__PLATT_acc_pct\tCCP__PLATT_risk_pct\tCCP__ISOTONIC_acc_pct\tCCP__ISOTONIC_risk_pct\tEntropy__PLATT_acc_pct\tEntropy__PLATT_risk_pct\tEntropy__ISOTONIC_acc_pct\tEntropy__ISOTONIC_risk_pct\tTokenSAR__PLATT_acc_pct\tTokenSAR__PLATT_risk_pct\tTokenSAR__ISOTONIC_acc_pct\tTokenSAR__ISOTONIC_risk_pct\tUPMI__PLATT_acc_pct\tUPMI__PLATT_risk_pct\tUPMI__ISOTONIC_acc_pct\tUPMI__ISOTONIC_risk_pct\tUCPMI__PLATT_acc_pct\tUCPMI__PLATT_risk_pct\tUCPMI__ISOTONIC_acc_pct\tUCPMI__ISOTONIC_risk_pct\tURD__PLATT_acc_pct\tURD__PLATT_risk_pct\tURD__ISOTONIC_acc_pct\tURD__ISOTONIC_risk_pct\tUFR__PLATT_acc_pct\tUFR__PLATT_risk_pct\tUFR__ISOTONIC_acc_pct\tUFR__ISOTONIC_risk_pct\tUHS__PLATT_acc_pct\tUHS__PLATT_risk_pct\tUHS__ISOTONIC_acc_pct\tUHS__ISOTONIC_risk_pct\tUSE__PLATT_acc_pct\tUSE__PLATT_risk_pct\tUSE__ISOTONIC_acc_pct\tUSE__ISOTONIC_risk_pct\tUSENTSAR__PLATT_acc_pct\tUSENTSAR__PLATT_risk_pct\tUSENTSAR__ISOTONIC_acc_pct\tUSENTSAR__ISOTONIC_risk_pct\tSEMANTIC_SET__PLATT_acc_pct\tSEMANTIC_SET__PLATT_risk_pct\tSEMANTIC_SET__ISOTONIC_acc_pct\tSEMANTIC_SET__ISOTONIC_risk_pct\tEIGEN_UNCERTAINTY__PLATT_acc_pct\tEIGEN_UNCERTAINTY__PLATT_risk_pct\tEIGEN_UNCERTAINTY__ISOTONIC_acc_pct\tEIGEN_UNCERTAINTY__ISOTONIC_risk_pct\tLEXICAL_SIM__PLATT_acc_pct\tLEXICAL_SIM__PLATT_risk_pct\tLEXICAL_SIM__ISOTONIC_acc_pct\tLEXICAL_SIM__ISOTONIC_risk_pct\tBB_Label_Prob__PLATT_acc_pct\tBB_Label_Prob__PLATT_risk_pct\tBB_Label_Prob__ISOTONIC_acc_pct\tBB_Label_Prob__ISOTONIC_risk_pct\tBB_SEMANIC_Entropy__PLATT_acc_pct\tBB_SEMANIC_Entropy__PLATT_risk_pct\tBB_SEMANIC_Entropy__ISOTONIC_acc_pct\tBB_SEMANIC_Entropy__ISOTONIC_risk_pct
+base\t10\t38\t71.05\t28.95\t76.32\t23.68\t78.95\t21.05\t81.58\t18.42\t78.95\t21.05\t81.58\t18.42\t73.68\t26.32\t78.95\t21.05\t78.95\t21.05\t81.58\t18.42\t73.68\t26.32\t76.32\t23.68\t81.58\t18.42\t81.58\t18.42\t81.58\t18.42\t65.79\t34.21\t78.95\t21.05\t63.16\t36.84\t76.32\t23.68\t73.68\t26.32\t78.95\t21.05\t76.32\t23.68\t81.58\t18.42\t89.47\t10.53\t78.95\t21.05\t78.95\t21.05\t78.95\t21.05\t65.79\t34.21\t76.32\t23.68\t68.42\t31.58\t81.58\t18.42\t68.42\t31.58\t78.95\t21.05\t71.05\t28.95
+base\t20\t76\t78.95\t21.05\t80.26\t19.74\t78.95\t21.05\t77.63\t22.37\t78.95\t21.05\t75.0\t25.0\t76.32\t23.68\t77.63\t22.37\t76.32\t23.68\t77.63\t22.37\t75.0\t25.0\t73.68\t26.32\t78.95\t21.05\t77.63\t22.37\t76.32\t23.68\t69.74\t30.26\t73.68\t26.32\t71.05\t28.95\t80.26\t19.74\t76.32\t23.68\t84.21\t15.79\t80.26\t19.74\t84.21\t15.79\t82.89\t17.11\t76.32\t23.68\t76.32\t23.68\t68.42\t31.58\t75.0\t25.0\t78.95\t21.05\t69.74\t30.26\t81.58\t18.42\t69.74\t30.26\t80.26\t19.74\t76.32\t23.68
+base\t30\t113\t80.53\t19.47\t83.19\t16.81\t73.45\t26.55\t77.88\t22.12\t77.88\t22.12\t76.11\t23.89\t75.22\t24.78\t76.99\t23.01\t75.22\t24.78\t77.88\t22.12\t78.76\t21.24\t76.11\t23.89\t73.45\t26.55\t77.88\t22.12\t76.11\t23.89\t70.8\t29.2\t75.22\t24.78\t72.57\t27.43\t79.65\t20.35\t80.53\t19.47\t86.73\t13.27\t83.19\t16.81\t82.3\t17.7\t82.3\t17.7\t75.22\t24.78\t75.22\t24.78\t70.8\t29.2\t76.99\t23.01\t81.42\t18.58\t69.03\t30.97\t84.07\t15.93\t71.68\t28.32\t80.53\t19.47\t80.53\t19.47
+base\t40\t151\t76.16\t23.84\t84.77\t15.23\t76.16\t23.84\t77.48\t22.52\t78.15\t21.85\t76.82\t23.18\t74.83\t25.17\t76.82\t23.18\t76.82\t23.18\t78.15\t21.85\t79.47\t20.53\t77.48\t22.52\t76.16\t23.84\t77.48\t22.52\t76.16\t23.84\t69.54\t30.46\t76.16\t23.84\t72.19\t27.81\t80.79\t19.21\t81.46\t18.54\t84.77\t15.23\t84.11\t15.89\t82.12\t17.88\t80.79\t19.21\t75.5\t24.5\t75.5\t24.5\t71.52\t28.48\t74.83\t25.17\t82.78\t17.22\t72.19\t27.81\t82.12\t17.88\t71.52\t28.48\t81.46\t18.54\t81.46\t18.54
+base\t50\t189\t75.13\t24.87\t82.01\t17.99\t76.72\t23.28\t77.25\t22.75\t76.19\t23.81\t76.19\t23.81\t77.25\t22.75\t75.66\t24.34\t77.25\t22.75\t79.89\t20.11\t78.84\t21.16\t78.84\t21.16\t76.19\t23.81\t77.25\t22.75\t77.25\t22.75\t71.43\t28.57\t77.25\t22.75\t71.96\t28.04\t80.95\t19.05\t81.48\t18.52\t84.66\t15.34\t80.95\t19.05\t80.42\t19.58\t78.84\t21.16\t71.96\t28.04\t71.96\t28.04\t72.49\t27.51\t73.02\t26.98\t82.54\t17.46\t72.49\t27.51\t79.89\t20.11\t72.49\t27.51\t80.95\t19.05\t80.95\t19.05
+base\t60\t227\t74.01\t25.99\t81.06\t18.94\t77.53\t22.47\t77.53\t22.47\t75.33\t24.67\t75.77\t24.23\t78.41\t21.59\t77.09\t22.91\t76.21\t23.79\t77.09\t22.91\t80.62\t19.38\t79.3\t20.7\t77.97\t22.03\t77.53\t22.47\t77.53\t22.47\t71.37\t28.63\t74.01\t25.99\t73.13\t26.87\t77.97\t22.03\t77.53\t22.47\t81.5\t18.5\t78.85\t21.15\t78.41\t21.59\t76.21\t23.79\t73.57\t26.43\t73.57\t26.43\t73.57\t26.43\t73.57\t26.43\t82.38\t17.62\t72.69\t27.31\t79.3\t20.7\t72.25\t27.75\t77.53\t22.47\t76.65\t23.35
+base\t70\t265\t75.47\t24.53\t78.49\t21.51\t78.49\t21.51\t76.6\t23.4\t76.23\t23.77\t75.47\t24.53\t78.11\t21.89\t78.49\t21.51\t76.98\t23.02\t76.6\t23.4\t80.0\t20.0\t79.62\t20.38\t78.11\t21.89\t76.6\t23.4\t79.25\t20.75\t72.45\t27.55\t73.21\t26.79\t72.83\t27.17\t76.6\t23.4\t76.23\t23.77\t79.25\t20.75\t77.36\t22.64\t78.11\t21.89\t75.09\t24.91\t73.58\t26.42\t73.58\t26.42\t73.96\t26.04\t72.83\t27.17\t78.87\t21.13\t73.21\t26.79\t78.11\t21.89\t72.83\t27.17\t76.6\t23.4\t75.09\t24.91
+base\t80\t302\t76.49\t23.51\t76.82\t23.18\t77.48\t22.52\t75.83\t24.17\t75.5\t24.5\t74.5\t25.5\t77.81\t22.19\t77.81\t22.19\t77.15\t22.85\t76.16\t23.84\t77.15\t22.85\t76.49\t23.51\t77.48\t22.52\t75.83\t24.17\t76.82\t23.18\t72.19\t27.81\t73.51\t26.49\t72.85\t27.15\t74.83\t25.17\t75.5\t24.5\t78.81\t21.19\t76.82\t23.18\t76.49\t23.51\t76.82\t23.18\t74.17\t25.83\t74.17\t25.83\t73.51\t26.49\t73.18\t26.82\t77.15\t22.85\t72.19\t27.81\t76.49\t23.51\t72.85\t27.15\t74.83\t25.17\t74.83\t25.17
+base\t90\t340\t75.29\t24.71\t75.88\t24.12\t75.29\t24.71\t75.0\t25.0\t75.59\t24.41\t75.29\t24.71\t76.18\t23.82\t74.41\t25.59\t75.88\t24.12\t75.29\t24.71\t77.35\t22.65\t75.0\t25.0\t75.29\t24.71\t75.0\t25.0\t76.18\t23.82\t72.94\t27.06\t75.29\t24.71\t73.24\t26.76\t73.24\t26.76\t75.29\t24.71\t75.88\t24.12\t76.18\t23.82\t76.47\t23.53\t75.88\t24.12\t73.82\t26.18\t73.82\t26.18\t73.82\t26.18\t73.53\t26.47\t76.18\t23.82\t72.94\t27.06\t75.88\t24.12\t72.94\t27.06\t73.24\t26.76\t74.12\t25.88
+plus\t10\t38\t68.42\t31.58\t68.42\t31.58\t71.05\t28.95\t57.89\t42.11\t60.53\t39.47\t68.42\t31.58\t73.68\t26.32\t65.79\t34.21\t68.42\t31.58\t68.42\t31.58\t68.42\t31.58\t65.79\t34.21\t73.68\t26.32\t57.89\t42.11\t68.42\t31.58\t50.0\t50.0\t65.79\t34.21\t63.16\t36.84\t76.32\t23.68\t63.16\t36.84\t76.32\t23.68\t68.42\t31.58\t81.58\t18.42\t84.21\t15.79\t68.42\t31.58\t65.79\t34.21\t76.32\t23.68\t52.63\t47.37\t60.53\t39.47\t68.42\t31.58\t73.68\t26.32\t60.53\t39.47\t76.32\t23.68\t65.79\t34.21
+plus\t20\t76\t77.63\t22.37\t72.37\t27.63\t71.05\t28.95\t65.79\t34.21\t68.42\t31.58\t67.11\t32.89\t68.42\t31.58\t65.79\t34.21\t65.79\t34.21\t69.74\t30.26\t72.37\t27.63\t69.74\t30.26\t71.05\t28.95\t65.79\t34.21\t71.05\t28.95\t61.84\t38.16\t65.79\t34.21\t64.47\t35.53\t69.74\t30.26\t69.74\t30.26\t76.32\t23.68\t71.05\t28.95\t76.32\t23.68\t75.0\t25.0\t65.79\t34.21\t61.84\t38.16\t71.05\t28.95\t61.84\t38.16\t75.0\t25.0\t64.47\t35.53\t75.0\t25.0\t67.11\t32.89\t69.74\t30.26\t69.74\t30.26
+plus\t30\t113\t74.34\t25.66\t75.22\t24.78\t68.14\t31.86\t68.14\t31.86\t68.14\t31.86\t65.49\t34.51\t67.26\t32.74\t69.03\t30.97\t69.03\t30.97\t69.91\t30.09\t75.22\t24.78\t73.45\t26.55\t68.14\t31.86\t68.14\t31.86\t69.03\t30.97\t61.95\t38.05\t68.14\t31.86\t63.72\t36.28\t69.91\t30.09\t71.68\t28.32\t78.76\t21.24\t76.99\t23.01\t73.45\t26.55\t74.34\t25.66\t69.91\t30.09\t62.83\t37.17\t63.72\t36.28\t64.6\t35.4\t73.45\t26.55\t64.6\t35.4\t76.11\t23.89\t63.72\t36.28\t69.91\t30.09\t69.91\t30.09
+plus\t40\t151\t69.54\t30.46\t78.81\t21.19\t69.54\t30.46\t69.54\t30.46\t69.54\t30.46\t67.55\t32.45\t68.87\t31.13\t66.89\t33.11\t70.2\t29.8\t70.86\t29.14\t73.51\t26.49\t74.17\t25.83\t68.21\t31.79\t69.54\t30.46\t69.54\t30.46\t62.91\t37.09\t71.52\t28.48\t62.91\t37.09\t73.51\t26.49\t72.85\t27.15\t77.48\t22.52\t78.15\t21.85\t75.5\t24.5\t72.85\t27.15\t66.23\t33.77\t65.56\t34.44\t64.9\t35.1\t64.24\t35.76\t73.51\t26.49\t64.24\t35.76\t74.17\t25.83\t65.56\t34.44\t73.51\t26.49\t72.19\t27.81
+plus\t50\t189\t67.72\t32.28\t74.6\t25.4\t69.31\t30.69\t69.31\t30.69\t69.31\t30.69\t66.67\t33.33\t69.31\t30.69\t68.25\t31.75\t70.9\t29.1\t69.84\t30.16\t74.6\t25.4\t73.54\t26.46\t69.31\t30.69\t69.31\t30.69\t70.37\t29.63\t64.55\t35.45\t68.78\t31.22\t65.61\t34.39\t73.54\t26.46\t72.49\t27.51\t76.19\t23.81\t75.13\t24.87\t74.07\t25.93\t73.02\t26.98\t65.08\t34.92\t62.96\t37.04\t64.02\t35.98\t64.55\t35.45\t75.66\t24.34\t64.02\t35.98\t73.02\t26.98\t64.55\t35.45\t72.49\t27.51\t73.02\t26.98
+plus\t60\t227\t67.4\t32.6\t74.89\t25.11\t69.16\t30.84\t70.04\t29.96\t69.16\t30.84\t68.28\t31.72\t70.93\t29.07\t69.16\t30.84\t69.6\t30.4\t69.6\t30.4\t72.25\t27.75\t70.93\t29.07\t70.04\t29.96\t70.04\t29.96\t70.48\t29.52\t65.64\t34.36\t65.64\t34.36\t66.52\t33.48\t69.6\t30.4\t71.37\t28.63\t74.01\t25.99\t72.69\t27.31\t70.48\t29.52\t70.04\t29.96\t66.08\t33.92\t65.64\t34.36\t65.2\t34.8\t64.76\t35.24\t73.13\t26.87\t65.64\t34.36\t70.93\t29.07\t65.2\t34.8\t70.04\t29.96\t71.81\t28.19
+plus\t70\t265\t67.92\t32.08\t72.08\t27.92\t69.81\t30.19\t69.81\t30.19\t70.19\t29.81\t67.17\t32.83\t70.57\t29.43\t69.43\t30.57\t69.43\t30.57\t68.68\t31.32\t71.32\t28.68\t70.94\t29.06\t69.43\t30.57\t69.81\t30.19\t70.94\t29.06\t65.28\t34.72\t65.66\t34.34\t66.42\t33.58\t68.68\t31.32\t69.43\t30.57\t72.08\t27.92\t68.68\t31.32\t68.68\t31.32\t69.43\t30.57\t64.53\t35.47\t64.53\t35.47\t66.04\t33.96\t65.28\t34.72\t70.57\t29.43\t66.42\t33.58\t70.19\t29.81\t64.53\t35.47\t68.68\t31.32\t70.19\t29.81
+plus\t80\t302\t68.54\t31.46\t68.87\t31.13\t69.21\t30.79\t69.54\t30.46\t68.87\t31.13\t68.21\t31.79\t69.54\t30.46\t69.87\t30.13\t68.87\t31.13\t67.88\t32.12\t69.87\t30.13\t68.87\t31.13\t69.21\t30.79\t69.54\t30.46\t69.54\t30.46\t65.56\t34.44\t65.89\t34.11\t66.56\t33.44\t66.89\t33.11\t68.21\t31.79\t70.2\t29.8\t68.54\t31.46\t69.54\t30.46\t68.54\t31.46\t65.89\t34.11\t65.89\t34.11\t67.55\t32.45\t64.57\t35.43\t69.21\t30.79\t65.23\t34.77\t70.2\t29.8\t65.56\t34.44\t66.56\t33.44\t67.88\t32.12
+plus\t90\t340\t66.76\t33.24\t67.94\t32.06\t67.06\t32.94\t67.65\t32.35\t67.94\t32.06\t68.24\t31.76\t67.65\t32.35\t67.94\t32.06\t68.24\t31.76\t67.65\t32.35\t68.53\t31.47\t67.65\t32.35\t67.06\t32.94\t67.65\t32.35\t67.94\t32.06\t66.18\t33.82\t66.47\t33.53\t66.76\t33.24\t67.06\t32.94\t66.76\t33.24\t68.82\t31.18\t68.24\t31.76\t68.24\t31.76\t67.94\t32.06\t65.88\t34.12\t65.88\t34.12\t66.76\t33.24\t65.59\t34.41\t67.94\t32.06\t66.47\t33.53\t69.12\t30.88\t66.18\t33.82\t67.06\t32.94\t67.06\t32.94`;        const lines = raw.trim().split(/\n+/);
+        const header = lines.shift().split('\t');
+        const rows = lines.map(line => {
+          const parts = line.split('\t');
+          const obj = {};
+          header.forEach((key, idx) => {
+            const val = parts[idx];
+            if (key === 'split') obj[key] = val;
+            else if (key === 'coverage_pct' || key === 'k') obj[key] = Number(val);
+            else obj[key] = Number(val);
+          });
+          return obj;
+        });
+        document.getElementById('raw-data-deepseek-mbpp').textContent = JSON.stringify({ header, rows });
+      })();
+    </script>
+    <script>
+      (function buildTableDeepseekMBPP() {
+        const payload = JSON.parse(document.getElementById('raw-data-deepseek-mbpp').textContent);
+        const rows = payload.rows;
+        const header = payload.header;
+
+        const metricKeys = header.slice(3);
+        const metrics = [];
+        const calibrationsSet = new Set();
+        metricKeys.forEach(key => {
+          const match = key.match(/(.+?)__([^_]+)_(acc|risk)_pct$/i);
+          if (!match) return;
+          const metric = match[1];
+          const calib = match[2].toUpperCase();
+          if (!metrics.includes(metric)) metrics.push(metric);
+          calibrationsSet.add(calib);
+        });
+
+        const calibrations = Array.from(calibrationsSet).sort((a, b) => {
+          if (a === 'PLATT') return -1;
+          if (b === 'PLATT') return 1;
+          return a.localeCompare(b);
+        });
+        const table = document.getElementById('calibration-deepseek-mbpp');
+        const thead = document.createElement('thead');
+        const top = document.createElement('tr');
+        ['coverage_pct', 'split', 'k'].forEach((label, idx) => {
+          const th = document.createElement('th');
+          th.textContent = label;
+          th.classList.add('frozen');
+          if (idx === 0) th.classList.add('coverage');
+          if (idx === 1) th.classList.add('split');
+          if (idx === 2) th.classList.add('k');
+          th.rowSpan = 3;
+          th.style.textTransform = 'none';
+          top.appendChild(th);
+        });
+        metrics.forEach(metric => {
+          const th = document.createElement('th');
+          th.textContent = metric.replace(/_/g, ' ');
+          th.colSpan = calibrations.length * 2;
+          top.appendChild(th);
+        });
+        thead.appendChild(top);
+
+        const mid = document.createElement('tr');
+        metrics.forEach(metric => {
+          calibrations.forEach(calib => {
+            const th = document.createElement('th');
+            th.textContent = calib;
+            th.colSpan = 2;
+            mid.appendChild(th);
+          });
+        });
+        thead.appendChild(mid);
+
+        const bottom = document.createElement('tr');
+        metrics.forEach(() => {
+          calibrations.forEach(() => {
+            ['accuracy%', 'risk%'].forEach(label => {
+              const th = document.createElement('th');
+              th.textContent = label;
+              bottom.appendChild(th);
+            });
+          });
+        });
+        thead.appendChild(bottom);
+
+        table.appendChild(thead);
+
+        const coverageValues = [...new Set(rows.map(r => r.coverage_pct))].sort((a, b) => a - b);
+        const splits = ['base', 'plus'];
+        const tbody = document.createElement('tbody');
+
+        function getValue(row, metric, calib, type) {
+          const key = `${metric}__${calib}_${type}_pct`;
+          return row[key] ?? '';
+        }
+
+        coverageValues.forEach(cov => {
+          splits.forEach((split, idx) => {
+            const row = rows.find(r => r.coverage_pct === cov && r.split === split);
+            if (!row) return;
+            const tr = document.createElement('tr');
+            if (idx === splits.length - 1) tr.classList.add('cov-sep');
+
+            if (idx === 0) {
+              const tdCov = document.createElement('td');
+              tdCov.textContent = cov;
+              tdCov.rowSpan = splits.length;
+              tdCov.classList.add('frozen', 'coverage');
+              tr.appendChild(tdCov);
+            }
+
+            const tdSplit = document.createElement('td');
+            tdSplit.textContent = split === 'base' ? 'Base' : 'Plus';
+            tdSplit.classList.add('frozen', 'split');
+            tr.appendChild(tdSplit);
+
+            const tdK = document.createElement('td');
+            tdK.textContent = row.k;
+            tdK.classList.add('number', 'frozen', 'k');
+            tr.appendChild(tdK);
+
+            metrics.forEach(metric => {
+              calibrations.forEach(calib => {
+                ['acc', 'risk'].forEach(kind => {
+                  const td = document.createElement('td');
+                  td.textContent = getValue(row, metric, calib, kind);
+                  td.classList.add('number');
+                  tr.appendChild(td);
+                });
+              });
+            });
+
+            tbody.appendChild(tr);
+          });
+        });
+
+        table.appendChild(tbody);
+      })();
+    </script>
+  </body>
+</html>

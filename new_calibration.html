@@ -1,0 +1,1471 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>CodeLlama Calibration Overview</title>
+    <style>
+      :root {
+        --bg: #0b0f14;
+        --panel: #131b28;
+        --text: #e6eef8;
+        --muted: #9fb3c8;
+        --border: #223047;
+        --row-alt: #0f1726;
+      }
+      html, body { height: 100%; }
+      body {
+        margin: 0;
+        background: var(--bg);
+        color: var(--text);
+        font: 14px/1.5 system-ui, -apple-system, Segoe UI, Roboto, Ubuntu, Cantarell, Noto Sans, Arial, "Apple Color Emoji", "Segoe UI Emoji";
+      }
+      .wrap {
+        max-width: 1400px;
+        margin: 24px auto;
+        padding: 0 20px 48px;
+      }
+      header {
+        margin-bottom: 12px;
+      }
+      h1 {
+        font-size: 20px;
+        margin: 0 0 4px;
+        letter-spacing: 0.2px;
+      }
+      .meta { color: var(--muted); font-size: 12px; }
+      .panel {
+        background: var(--panel);
+        border: 1px solid var(--border);
+        border-radius: 12px;
+        overflow: hidden;
+        box-shadow: 0 6px 28px rgba(0,0,0,0.3);
+      }
+      .table-wrap { overflow: auto; }
+      table {
+        width: 100%;
+        border-collapse: collapse;
+        font-variant-numeric: tabular-nums;
+        font-size: 12px;
+      }
+      table.pivot-table {
+        font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono";
+      }
+      thead th {
+        position: sticky;
+        top: 0;
+        z-index: 2;
+        background: #152135;
+        border: 1px solid rgba(255,255,255,0.08);
+        padding: 6px 8px;
+        text-align: center;
+        color: var(--muted);
+        font-weight: 600;
+        white-space: nowrap;
+      }
+      tbody td {
+        padding: 4px 8px;
+        border: 1px solid rgba(255,255,255,0.05);
+        text-align: right;
+      }
+      tbody td.text { text-align: left; }
+      tbody tr:nth-child(even) { background: var(--row-alt); }
+      tbody tr.cov-sep td { border-bottom: 2px solid var(--border); }
+      a { color: #6ac8ff; }
+    </style>
+  </head>
+  <body>
+    <div class="wrap">
+      
+
+      <section style="margin-top: 16px;">
+        <header>
+          <h1>HumanEval — CodeLlama</h1>
+        </header>
+        <div class="panel">
+          <div class="table-wrap">
+            <table id="pivot-humaneval" class="pivot-table"></table>
+          </div>
+        </div>
+      </section>
+
+      <section style="margin-top: 32px;">
+        <header>
+          <h1>MBPP — CodeLlama</h1>
+        </header>
+        <div class="panel">
+          <div class="table-wrap">
+            <table id="pivot-mbpp" class="pivot-table"></table>
+          </div>
+        </div>
+      </section>
+
+      <section style="margin-top: 32px;">
+        <header>
+          <h1>HumanEval — DeepSeek</h1>
+        </header>
+        <div class="panel">
+          <div class="table-wrap">
+            <table id="pivot-humaneval-deepseek" class="pivot-table"></table>
+          </div>
+        </div>
+      </section>
+
+      <section style="margin-top: 32px;">
+        <header>
+          <h1>MBPP — DeepSeek</h1>
+        </header>
+        <div class="panel">
+          <div class="table-wrap">
+            <table id="pivot-mbpp-deepseek" class="pivot-table"></table>
+          </div>
+        </div>
+      </section>
+    </div>
+
+    <script>
+      const DATASETS = [
+        {
+          id: 'pivot-humaneval',
+          data: `split\tmetric\tcoverage_pct\tk\taccuracy_pct\trisk_pct
+base\tBB_Label_Prob\t10\t17\t58.82\t41.18
+base\tBB_Label_Prob\t20\t33\t42.42\t57.58
+base\tBB_Label_Prob\t30\t50\t36.0\t64.0
+base\tBB_Label_Prob\t40\t66\t39.39\t60.61
+base\tBB_Label_Prob\t50\t82\t35.37\t64.63
+base\tBB_Label_Prob\t60\t99\t39.39\t60.61
+base\tBB_Label_Prob\t70\t115\t37.39\t62.61
+base\tBB_Label_Prob\t80\t132\t40.91\t59.09
+base\tBB_Label_Prob\t90\t148\t41.22\t58.78
+base\tBB_SEMANIC_Entropy\t10\t17\t29.41\t70.59
+base\tBB_SEMANIC_Entropy\t20\t33\t36.36\t63.64
+base\tBB_SEMANIC_Entropy\t30\t50\t36.0\t64.0
+base\tBB_SEMANIC_Entropy\t40\t66\t34.85\t65.15
+base\tBB_SEMANIC_Entropy\t50\t82\t35.37\t64.63
+base\tBB_SEMANIC_Entropy\t60\t99\t36.36\t63.64
+base\tBB_SEMANIC_Entropy\t70\t115\t37.39\t62.61
+base\tBB_SEMANIC_Entropy\t80\t132\t37.12\t62.88
+base\tBB_SEMANIC_Entropy\t90\t148\t39.19\t60.81
+base\tCCP\t10\t17\t29.41\t70.59
+base\tCCP\t20\t33\t42.42\t57.58
+base\tCCP\t30\t50\t44.0\t56.0
+base\tCCP\t40\t66\t40.91\t59.09
+base\tCCP\t50\t82\t39.02\t60.98
+base\tCCP\t60\t99\t40.4\t59.6
+base\tCCP\t70\t115\t40.0\t60.0
+base\tCCP\t80\t132\t38.64\t61.36
+base\tCCP\t90\t148\t39.19\t60.81
+base\tEIGEN_UNCERTAINTY\t10\t17\t0.0\t100.0
+base\tEIGEN_UNCERTAINTY\t20\t33\t21.21\t78.79
+base\tEIGEN_UNCERTAINTY\t30\t50\t20.0\t80.0
+base\tEIGEN_UNCERTAINTY\t40\t66\t25.76\t74.24
+base\tEIGEN_UNCERTAINTY\t50\t82\t26.83\t73.17
+base\tEIGEN_UNCERTAINTY\t60\t99\t33.33\t66.67
+base\tEIGEN_UNCERTAINTY\t70\t115\t36.52\t63.48
+base\tEIGEN_UNCERTAINTY\t80\t132\t37.12\t62.88
+base\tEIGEN_UNCERTAINTY\t90\t148\t39.19\t60.81
+base\tEntropy\t10\t17\t47.06\t52.94
+base\tEntropy\t20\t33\t54.55\t45.45
+base\tEntropy\t30\t50\t56.0\t44.0
+base\tEntropy\t40\t66\t50.0\t50.0
+base\tEntropy\t50\t82\t51.22\t48.78
+base\tEntropy\t60\t99\t49.49\t50.51
+base\tEntropy\t70\t115\t46.09\t53.91
+base\tEntropy\t80\t132\t43.94\t56.06
+base\tEntropy\t90\t148\t42.57\t57.43
+base\tLEXICAL_SIM\t10\t17\t35.29\t64.71
+base\tLEXICAL_SIM\t20\t33\t33.33\t66.67
+base\tLEXICAL_SIM\t30\t50\t32.0\t68.0
+base\tLEXICAL_SIM\t40\t66\t37.88\t62.12
+base\tLEXICAL_SIM\t50\t82\t37.8\t62.2
+base\tLEXICAL_SIM\t60\t99\t41.41\t58.59
+base\tLEXICAL_SIM\t70\t115\t45.22\t54.78
+base\tLEXICAL_SIM\t80\t132\t44.7\t55.3
+base\tLEXICAL_SIM\t90\t148\t41.22\t58.78
+base\tMSP\t10\t17\t88.24\t11.76
+base\tMSP\t20\t33\t84.85\t15.15
+base\tMSP\t30\t50\t74.0\t26.0
+base\tMSP\t40\t66\t63.64\t36.36
+base\tMSP\t50\t82\t57.32\t42.68
+base\tMSP\t60\t99\t51.52\t48.48
+base\tMSP\t70\t115\t47.83\t52.17
+base\tMSP\t80\t132\t44.7\t55.3
+base\tMSP\t90\t148\t43.24\t56.76
+base\tSEMANTIC_SET\t10\t17\t58.82\t41.18
+base\tSEMANTIC_SET\t20\t33\t60.61\t39.39
+base\tSEMANTIC_SET\t30\t50\t60.0\t40.0
+base\tSEMANTIC_SET\t40\t66\t57.58\t42.42
+base\tSEMANTIC_SET\t50\t82\t52.44\t47.56
+base\tSEMANTIC_SET\t60\t99\t48.48\t51.52
+base\tSEMANTIC_SET\t70\t115\t45.22\t54.78
+base\tSEMANTIC_SET\t80\t132\t41.67\t58.33
+base\tSEMANTIC_SET\t90\t148\t39.19\t60.81
+base\tTokenSAR\t10\t17\t58.82\t41.18
+base\tTokenSAR\t20\t33\t60.61\t39.39
+base\tTokenSAR\t30\t50\t62.0\t38.0
+base\tTokenSAR\t40\t66\t57.58\t42.42
+base\tTokenSAR\t50\t82\t52.44\t47.56
+base\tTokenSAR\t60\t99\t49.49\t50.51
+base\tTokenSAR\t70\t115\t48.7\t51.3
+base\tTokenSAR\t80\t132\t45.45\t54.55
+base\tTokenSAR\t90\t148\t41.89\t58.11
+base\tUCPMI\t10\t17\t58.82\t41.18
+base\tUCPMI\t20\t33\t60.61\t39.39
+base\tUCPMI\t30\t50\t64.0\t36.0
+base\tUCPMI\t40\t66\t56.06\t43.94
+base\tUCPMI\t50\t82\t51.22\t48.78
+base\tUCPMI\t60\t99\t50.51\t49.49
+base\tUCPMI\t70\t115\t48.7\t51.3
+base\tUCPMI\t80\t132\t45.45\t54.55
+base\tUCPMI\t90\t148\t41.89\t58.11
+base\tUFR\t10\t17\t47.06\t52.94
+base\tUFR\t20\t33\t45.45\t54.55
+base\tUFR\t30\t50\t48.0\t52.0
+base\tUFR\t40\t66\t42.42\t57.58
+base\tUFR\t50\t82\t46.34\t53.66
+base\tUFR\t60\t99\t45.45\t54.55
+base\tUFR\t70\t115\t44.35\t55.65
+base\tUFR\t80\t132\t43.94\t56.06
+base\tUFR\t90\t148\t41.89\t58.11
+base\tUHS\t10\t17\t29.41\t70.59
+base\tUHS\t20\t33\t36.36\t63.64
+base\tUHS\t30\t50\t36.0\t64.0
+base\tUHS\t40\t66\t34.85\t65.15
+base\tUHS\t50\t82\t35.37\t64.63
+base\tUHS\t60\t99\t36.36\t63.64
+base\tUHS\t70\t115\t37.39\t62.61
+base\tUHS\t80\t132\t37.12\t62.88
+base\tUHS\t90\t148\t39.19\t60.81
+base\tUPMI\t10\t17\t94.12\t5.88
+base\tUPMI\t20\t33\t78.79\t21.21
+base\tUPMI\t30\t50\t68.0\t32.0
+base\tUPMI\t40\t66\t59.09\t40.91
+base\tUPMI\t50\t82\t56.1\t43.9
+base\tUPMI\t60\t99\t51.52\t48.48
+base\tUPMI\t70\t115\t48.7\t51.3
+base\tUPMI\t80\t132\t46.21\t53.79
+base\tUPMI\t90\t148\t43.24\t56.76
+base\tUPerp\t10\t17\t58.82\t41.18
+base\tUPerp\t20\t33\t60.61\t39.39
+base\tUPerp\t30\t50\t64.0\t36.0
+base\tUPerp\t40\t66\t56.06\t43.94
+base\tUPerp\t50\t82\t51.22\t48.78
+base\tUPerp\t60\t99\t50.51\t49.49
+base\tUPerp\t70\t115\t48.7\t51.3
+base\tUPerp\t80\t132\t45.45\t54.55
+base\tUPerp\t90\t148\t41.89\t58.11
+base\tURD\t10\t17\t29.41\t70.59
+base\tURD\t20\t33\t18.18\t81.82
+base\tURD\t30\t50\t22.0\t78.0
+base\tURD\t40\t66\t25.76\t74.24
+base\tURD\t50\t82\t28.05\t71.95
+base\tURD\t60\t99\t29.29\t70.71
+base\tURD\t70\t115\t31.3\t68.7
+base\tURD\t80\t132\t36.36\t63.64
+base\tURD\t90\t148\t37.16\t62.84
+base\tUSE\t10\t17\t35.29\t64.71
+base\tUSE\t20\t33\t45.45\t54.55
+base\tUSE\t30\t50\t42.0\t58.0
+base\tUSE\t40\t66\t42.42\t57.58
+base\tUSE\t50\t82\t42.68\t57.32
+base\tUSE\t60\t99\t40.4\t59.6
+base\tUSE\t70\t115\t40.0\t60.0
+base\tUSE\t80\t132\t39.39\t60.61
+base\tUSE\t90\t148\t39.19\t60.81
+base\tUSENTSAR\t10\t17\t35.29\t64.71
+base\tUSENTSAR\t20\t33\t45.45\t54.55
+base\tUSENTSAR\t30\t50\t38.0\t62.0
+base\tUSENTSAR\t40\t66\t37.88\t62.12
+base\tUSENTSAR\t50\t82\t41.46\t58.54
+base\tUSENTSAR\t60\t99\t42.42\t57.58
+base\tUSENTSAR\t70\t115\t41.74\t58.26
+base\tUSENTSAR\t80\t132\t40.15\t59.85
+base\tUSENTSAR\t90\t148\t39.86\t60.14
+plus\tBB_Label_Prob\t10\t17\t58.82\t41.18
+plus\tBB_Label_Prob\t20\t33\t42.42\t57.58
+plus\tBB_Label_Prob\t30\t50\t32.0\t68.0
+plus\tBB_Label_Prob\t40\t66\t30.3\t69.7
+plus\tBB_Label_Prob\t50\t82\t28.05\t71.95
+plus\tBB_Label_Prob\t60\t99\t30.3\t69.7
+plus\tBB_Label_Prob\t70\t115\t29.57\t70.43
+plus\tBB_Label_Prob\t80\t132\t34.09\t65.91
+plus\tBB_Label_Prob\t90\t148\t35.14\t64.86
+plus\tBB_SEMANIC_Entropy\t10\t17\t23.53\t76.47
+plus\tBB_SEMANIC_Entropy\t20\t33\t27.27\t72.73
+plus\tBB_SEMANIC_Entropy\t30\t50\t30.0\t70.0
+plus\tBB_SEMANIC_Entropy\t40\t66\t28.79\t71.21
+plus\tBB_SEMANIC_Entropy\t50\t82\t30.49\t69.51
+plus\tBB_SEMANIC_Entropy\t60\t99\t31.31\t68.69
+plus\tBB_SEMANIC_Entropy\t70\t115\t33.04\t66.96
+plus\tBB_SEMANIC_Entropy\t80\t132\t31.06\t68.94
+plus\tBB_SEMANIC_Entropy\t90\t148\t33.78\t66.22
+plus\tCCP\t10\t17\t29.41\t70.59
+plus\tCCP\t20\t33\t42.42\t57.58
+plus\tCCP\t30\t50\t44.0\t56.0
+plus\tCCP\t40\t66\t39.39\t60.61
+plus\tCCP\t50\t82\t37.8\t62.2
+plus\tCCP\t60\t99\t38.38\t61.62
+plus\tCCP\t70\t115\t37.39\t62.61
+plus\tCCP\t80\t132\t34.09\t65.91
+plus\tCCP\t90\t148\t33.78\t66.22
+plus\tEIGEN_UNCERTAINTY\t10\t17\t0.0\t100.0
+plus\tEIGEN_UNCERTAINTY\t20\t33\t15.15\t84.85
+plus\tEIGEN_UNCERTAINTY\t30\t50\t14.0\t86.0
+plus\tEIGEN_UNCERTAINTY\t40\t66\t18.18\t81.82
+plus\tEIGEN_UNCERTAINTY\t50\t82\t20.73\t79.27
+plus\tEIGEN_UNCERTAINTY\t60\t99\t28.28\t71.72
+plus\tEIGEN_UNCERTAINTY\t70\t115\t30.43\t69.57
+plus\tEIGEN_UNCERTAINTY\t80\t132\t30.3\t69.7
+plus\tEIGEN_UNCERTAINTY\t90\t148\t33.11\t66.89
+plus\tEntropy\t10\t17\t35.29\t64.71
+plus\tEntropy\t20\t33\t48.48\t51.52
+plus\tEntropy\t30\t50\t48.0\t52.0
+plus\tEntropy\t40\t66\t43.94\t56.06
+plus\tEntropy\t50\t82\t45.12\t54.88
+plus\tEntropy\t60\t99\t43.43\t56.57
+plus\tEntropy\t70\t115\t40.0\t60.0
+plus\tEntropy\t80\t132\t37.12\t62.88
+plus\tEntropy\t90\t148\t36.49\t63.51
+plus\tLEXICAL_SIM\t10\t17\t29.41\t70.59
+plus\tLEXICAL_SIM\t20\t33\t27.27\t72.73
+plus\tLEXICAL_SIM\t30\t50\t28.0\t72.0
+plus\tLEXICAL_SIM\t40\t66\t31.82\t68.18
+plus\tLEXICAL_SIM\t50\t82\t32.93\t67.07
+plus\tLEXICAL_SIM\t60\t99\t36.36\t63.64
+plus\tLEXICAL_SIM\t70\t115\t39.13\t60.87
+plus\tLEXICAL_SIM\t80\t132\t38.64\t61.36
+plus\tLEXICAL_SIM\t90\t148\t35.81\t64.19
+plus\tMSP\t10\t17\t82.35\t17.65
+plus\tMSP\t20\t33\t75.76\t24.24
+plus\tMSP\t30\t50\t62.0\t38.0
+plus\tMSP\t40\t66\t53.03\t46.97
+plus\tMSP\t50\t82\t48.78\t51.22
+plus\tMSP\t60\t99\t44.44\t55.56
+plus\tMSP\t70\t115\t40.87\t59.13
+plus\tMSP\t80\t132\t38.64\t61.36
+plus\tMSP\t90\t148\t37.16\t62.84
+plus\tSEMANTIC_SET\t10\t17\t52.94\t47.06
+plus\tSEMANTIC_SET\t20\t33\t57.58\t42.42
+plus\tSEMANTIC_SET\t30\t50\t58.0\t42.0
+plus\tSEMANTIC_SET\t40\t66\t56.06\t43.94
+plus\tSEMANTIC_SET\t50\t82\t50.0\t50.0
+plus\tSEMANTIC_SET\t60\t99\t46.46\t53.54
+plus\tSEMANTIC_SET\t70\t115\t42.61\t57.39
+plus\tSEMANTIC_SET\t80\t132\t38.64\t61.36
+plus\tSEMANTIC_SET\t90\t148\t36.49\t63.51
+plus\tTokenSAR\t10\t17\t47.06\t52.94
+plus\tTokenSAR\t20\t33\t51.52\t48.48
+plus\tTokenSAR\t30\t50\t54.0\t46.0
+plus\tTokenSAR\t40\t66\t50.0\t50.0
+plus\tTokenSAR\t50\t82\t46.34\t53.66
+plus\tTokenSAR\t60\t99\t42.42\t57.58
+plus\tTokenSAR\t70\t115\t42.61\t57.39
+plus\tTokenSAR\t80\t132\t38.64\t61.36
+plus\tTokenSAR\t90\t148\t35.81\t64.19
+plus\tUCPMI\t10\t17\t47.06\t52.94
+plus\tUCPMI\t20\t33\t54.55\t45.45
+plus\tUCPMI\t30\t50\t56.0\t44.0
+plus\tUCPMI\t40\t66\t48.48\t51.52
+plus\tUCPMI\t50\t82\t45.12\t54.88
+plus\tUCPMI\t60\t99\t43.43\t56.57
+plus\tUCPMI\t70\t115\t42.61\t57.39
+plus\tUCPMI\t80\t132\t38.64\t61.36
+plus\tUCPMI\t90\t148\t35.81\t64.19
+plus\tUFR\t10\t17\t41.18\t58.82
+plus\tUFR\t20\t33\t42.42\t57.58
+plus\tUFR\t30\t50\t42.0\t58.0
+plus\tUFR\t40\t66\t37.88\t62.12
+plus\tUFR\t50\t82\t39.02\t60.98
+plus\tUFR\t60\t99\t39.39\t60.61
+plus\tUFR\t70\t115\t39.13\t60.87
+plus\tUFR\t80\t132\t37.88\t62.12
+plus\tUFR\t90\t148\t36.49\t63.51
+plus\tUHS\t10\t17\t23.53\t76.47
+plus\tUHS\t20\t33\t27.27\t72.73
+plus\tUHS\t30\t50\t30.0\t70.0
+plus\tUHS\t40\t66\t28.79\t71.21
+plus\tUHS\t50\t82\t30.49\t69.51
+plus\tUHS\t60\t99\t31.31\t68.69
+plus\tUHS\t70\t115\t33.04\t66.96
+plus\tUHS\t80\t132\t31.06\t68.94
+plus\tUHS\t90\t148\t33.78\t66.22
+plus\tUPMI\t10\t17\t76.47\t23.53
+plus\tUPMI\t20\t33\t66.67\t33.33
+plus\tUPMI\t30\t50\t60.0\t40.0
+plus\tUPMI\t40\t66\t51.52\t48.48
+plus\tUPMI\t50\t82\t47.56\t52.44
+plus\tUPMI\t60\t99\t43.43\t56.57
+plus\tUPMI\t70\t115\t41.74\t58.26
+plus\tUPMI\t80\t132\t40.15\t59.85
+plus\tUPMI\t90\t148\t37.84\t62.16
+plus\tUPerp\t10\t17\t47.06\t52.94
+plus\tUPerp\t20\t33\t54.55\t45.45
+plus\tUPerp\t30\t50\t56.0\t44.0
+plus\tUPerp\t40\t66\t48.48\t51.52
+plus\tUPerp\t50\t82\t45.12\t54.88
+plus\tUPerp\t60\t99\t43.43\t56.57
+plus\tUPerp\t70\t115\t42.61\t57.39
+plus\tUPerp\t80\t132\t38.64\t61.36
+plus\tUPerp\t90\t148\t35.81\t64.19
+plus\tURD\t10\t17\t29.41\t70.59
+plus\tURD\t20\t33\t18.18\t81.82
+plus\tURD\t30\t50\t18.0\t82.0
+plus\tURD\t40\t66\t21.21\t78.79
+plus\tURD\t50\t82\t23.17\t76.83
+plus\tURD\t60\t99\t25.25\t74.75
+plus\tURD\t70\t115\t26.96\t73.04
+plus\tURD\t80\t132\t31.06\t68.94
+plus\tURD\t90\t148\t32.43\t67.57
+plus\tUSE\t10\t17\t35.29\t64.71
+plus\tUSE\t20\t33\t45.45\t54.55
+plus\tUSE\t30\t50\t40.0\t60.0
+plus\tUSE\t40\t66\t39.39\t60.61
+plus\tUSE\t50\t82\t40.24\t59.76
+plus\tUSE\t60\t99\t37.37\t62.63
+plus\tUSE\t70\t115\t35.65\t64.35
+plus\tUSE\t80\t132\t34.09\t65.91
+plus\tUSE\t90\t148\t34.46\t65.54
+plus\tUSENTSAR\t10\t17\t35.29\t64.71
+plus\tUSENTSAR\t20\t33\t42.42\t57.58
+plus\tUSENTSAR\t30\t50\t34.0\t66.0
+plus\tUSENTSAR\t40\t66\t33.33\t66.67
+plus\tUSENTSAR\t50\t82\t36.59\t63.41
+plus\tUSENTSAR\t60\t99\t37.37\t62.63
+plus\tUSENTSAR\t70\t115\t36.52\t63.48
+plus\tUSENTSAR\t80\t132\t35.61\t64.39
+plus\tUSENTSAR\t90\t148\t35.14\t64.86`        },
+        {
+          id: 'pivot-mbpp',
+          data: `split\tmetric\tcoverage_pct\tk\taccuracy_pct\trisk_pct
+base\tBB_Label_Prob\t10\t38\t34.21\t65.79
+base\tBB_Label_Prob\t20\t76\t40.79\t59.21
+base\tBB_Label_Prob\t30\t114\t37.72\t62.28
+base\tBB_Label_Prob\t40\t152\t41.45\t58.55
+base\tBB_Label_Prob\t50\t189\t44.97\t55.03
+base\tBB_Label_Prob\t60\t227\t48.9\t51.1
+base\tBB_Label_Prob\t70\t265\t50.19\t49.81
+base\tBB_Label_Prob\t80\t303\t51.49\t48.51
+base\tBB_Label_Prob\t90\t341\t52.2\t47.8
+base\tBB_SEMANIC_Entropy\t10\t38\t52.63\t47.37
+base\tBB_SEMANIC_Entropy\t20\t76\t55.26\t44.74
+base\tBB_SEMANIC_Entropy\t30\t114\t56.14\t43.86
+base\tBB_SEMANIC_Entropy\t40\t152\t57.89\t42.11
+base\tBB_SEMANIC_Entropy\t50\t189\t55.56\t44.44
+base\tBB_SEMANIC_Entropy\t60\t227\t57.71\t42.29
+base\tBB_SEMANIC_Entropy\t70\t265\t55.85\t44.15
+base\tBB_SEMANIC_Entropy\t80\t303\t54.46\t45.54
+base\tBB_SEMANIC_Entropy\t90\t341\t53.96\t46.04
+base\tCCP\t10\t38\t60.53\t39.47
+base\tCCP\t20\t76\t63.16\t36.84
+base\tCCP\t30\t114\t65.79\t34.21
+base\tCCP\t40\t152\t64.47\t35.53
+base\tCCP\t50\t189\t64.55\t35.45
+base\tCCP\t60\t227\t61.23\t38.77
+base\tCCP\t70\t265\t61.51\t38.49
+base\tCCP\t80\t303\t57.76\t42.24
+base\tCCP\t90\t341\t56.6\t43.4
+base\tEIGEN_UNCERTAINTY\t10\t38\t31.58\t68.42
+base\tEIGEN_UNCERTAINTY\t20\t76\t47.37\t52.63
+base\tEIGEN_UNCERTAINTY\t30\t114\t48.25\t51.75
+base\tEIGEN_UNCERTAINTY\t40\t152\t47.37\t52.63
+base\tEIGEN_UNCERTAINTY\t50\t189\t49.21\t50.79
+base\tEIGEN_UNCERTAINTY\t60\t227\t47.58\t52.42
+base\tEIGEN_UNCERTAINTY\t70\t265\t49.43\t50.57
+base\tEIGEN_UNCERTAINTY\t80\t303\t51.49\t48.51
+base\tEIGEN_UNCERTAINTY\t90\t341\t52.49\t47.51
+base\tEntropy\t10\t38\t57.89\t42.11
+base\tEntropy\t20\t76\t59.21\t40.79
+base\tEntropy\t30\t114\t55.26\t44.74
+base\tEntropy\t40\t152\t58.55\t41.45
+base\tEntropy\t50\t189\t58.73\t41.27
+base\tEntropy\t60\t227\t57.27\t42.73
+base\tEntropy\t70\t265\t57.74\t42.26
+base\tEntropy\t80\t303\t57.43\t42.57
+base\tEntropy\t90\t341\t54.55\t45.45
+base\tLEXICAL_SIM\t10\t38\t42.11\t57.89
+base\tLEXICAL_SIM\t20\t76\t40.79\t59.21
+base\tLEXICAL_SIM\t30\t114\t41.23\t58.77
+base\tLEXICAL_SIM\t40\t152\t44.08\t55.92
+base\tLEXICAL_SIM\t50\t189\t44.97\t55.03
+base\tLEXICAL_SIM\t60\t227\t48.02\t51.98
+base\tLEXICAL_SIM\t70\t265\t49.81\t50.19
+base\tLEXICAL_SIM\t80\t303\t49.83\t50.17
+base\tLEXICAL_SIM\t90\t341\t52.49\t47.51
+base\tMSP\t10\t38\t81.58\t18.42
+base\tMSP\t20\t76\t75.0\t25.0
+base\tMSP\t30\t114\t74.56\t25.44
+base\tMSP\t40\t152\t73.68\t26.32
+base\tMSP\t50\t189\t70.9\t29.1
+base\tMSP\t60\t227\t68.28\t31.72
+base\tMSP\t70\t265\t65.28\t34.72
+base\tMSP\t80\t303\t61.72\t38.28
+base\tMSP\t90\t341\t57.77\t42.23
+base\tSEMANTIC_SET\t10\t38\t47.37\t52.63
+base\tSEMANTIC_SET\t20\t76\t51.32\t48.68
+base\tSEMANTIC_SET\t30\t114\t47.37\t52.63
+base\tSEMANTIC_SET\t40\t152\t45.39\t54.61
+base\tSEMANTIC_SET\t50\t189\t47.62\t52.38
+base\tSEMANTIC_SET\t60\t227\t49.34\t50.66
+base\tSEMANTIC_SET\t70\t265\t49.81\t50.19
+base\tSEMANTIC_SET\t80\t303\t51.49\t48.51
+base\tSEMANTIC_SET\t90\t341\t52.79\t47.21
+base\tTokenSAR\t10\t38\t68.42\t31.58
+base\tTokenSAR\t20\t76\t64.47\t35.53
+base\tTokenSAR\t30\t114\t57.02\t42.98
+base\tTokenSAR\t40\t152\t57.89\t42.11
+base\tTokenSAR\t50\t189\t58.73\t41.27
+base\tTokenSAR\t60\t227\t57.71\t42.29
+base\tTokenSAR\t70\t265\t58.49\t41.51
+base\tTokenSAR\t80\t303\t56.77\t43.23
+base\tTokenSAR\t90\t341\t54.55\t45.45
+base\tUCPMI\t10\t38\t65.79\t34.21
+base\tUCPMI\t20\t76\t57.89\t42.11
+base\tUCPMI\t30\t114\t57.02\t42.98
+base\tUCPMI\t40\t152\t57.24\t42.76
+base\tUCPMI\t50\t189\t57.14\t42.86
+base\tUCPMI\t60\t227\t58.15\t41.85
+base\tUCPMI\t70\t265\t58.49\t41.51
+base\tUCPMI\t80\t303\t57.1\t42.9
+base\tUCPMI\t90\t341\t54.25\t45.75
+base\tUFR\t10\t38\t47.37\t52.63
+base\tUFR\t20\t76\t52.63\t47.37
+base\tUFR\t30\t114\t51.75\t48.25
+base\tUFR\t40\t152\t51.97\t48.03
+base\tUFR\t50\t189\t50.79\t49.21
+base\tUFR\t60\t227\t52.42\t47.58
+base\tUFR\t70\t265\t53.96\t46.04
+base\tUFR\t80\t303\t54.13\t45.87
+base\tUFR\t90\t341\t56.01\t43.99
+base\tUHS\t10\t38\t50.0\t50.0
+base\tUHS\t20\t76\t55.26\t44.74
+base\tUHS\t30\t114\t56.14\t43.86
+base\tUHS\t40\t152\t57.24\t42.76
+base\tUHS\t50\t189\t55.03\t44.97
+base\tUHS\t60\t227\t57.71\t42.29
+base\tUHS\t70\t265\t55.85\t44.15
+base\tUHS\t80\t303\t54.13\t45.87
+base\tUHS\t90\t341\t53.96\t46.04
+base\tUPMI\t10\t38\t73.68\t26.32
+base\tUPMI\t20\t76\t73.68\t26.32
+base\tUPMI\t30\t114\t71.05\t28.95
+base\tUPMI\t40\t152\t64.47\t35.53
+base\tUPMI\t50\t189\t63.49\t36.51
+base\tUPMI\t60\t227\t63.44\t36.56
+base\tUPMI\t70\t265\t61.89\t38.11
+base\tUPMI\t80\t303\t60.07\t39.93
+base\tUPMI\t90\t341\t57.77\t42.23
+base\tUPerp\t10\t38\t68.42\t31.58
+base\tUPerp\t20\t76\t57.89\t42.11
+base\tUPerp\t30\t114\t57.89\t42.11
+base\tUPerp\t40\t152\t57.24\t42.76
+base\tUPerp\t50\t189\t56.61\t43.39
+base\tUPerp\t60\t227\t57.71\t42.29
+base\tUPerp\t70\t265\t58.49\t41.51
+base\tUPerp\t80\t303\t57.1\t42.9
+base\tUPerp\t90\t341\t54.55\t45.45
+base\tURD\t10\t38\t50.0\t50.0
+base\tURD\t20\t76\t38.16\t61.84
+base\tURD\t30\t114\t43.86\t56.14
+base\tURD\t40\t152\t46.05\t53.95
+base\tURD\t50\t189\t49.21\t50.79
+base\tURD\t60\t227\t50.66\t49.34
+base\tURD\t70\t265\t52.08\t47.92
+base\tURD\t80\t303\t51.82\t48.18
+base\tURD\t90\t341\t52.49\t47.51
+base\tUSE\t10\t38\t71.05\t28.95
+base\tUSE\t20\t76\t63.16\t36.84
+base\tUSE\t30\t114\t64.04\t35.96
+base\tUSE\t40\t152\t62.5\t37.5
+base\tUSE\t50\t189\t60.32\t39.68
+base\tUSE\t60\t227\t61.23\t38.77
+base\tUSE\t70\t265\t60.0\t40.0
+base\tUSE\t80\t303\t57.76\t42.24
+base\tUSE\t90\t341\t56.01\t43.99
+base\tUSENTSAR\t10\t38\t60.53\t39.47
+base\tUSENTSAR\t20\t76\t60.53\t39.47
+base\tUSENTSAR\t30\t114\t60.53\t39.47
+base\tUSENTSAR\t40\t152\t61.18\t38.82
+base\tUSENTSAR\t50\t189\t59.79\t40.21
+base\tUSENTSAR\t60\t227\t58.15\t41.85
+base\tUSENTSAR\t70\t265\t58.11\t41.89
+base\tUSENTSAR\t80\t303\t56.77\t43.23
+base\tUSENTSAR\t90\t341\t54.25\t45.75
+plus\tBB_Label_Prob\t10\t38\t28.95\t71.05
+plus\tBB_Label_Prob\t20\t76\t31.58\t68.42
+plus\tBB_Label_Prob\t30\t114\t28.07\t71.93
+plus\tBB_Label_Prob\t40\t152\t32.89\t67.11
+plus\tBB_Label_Prob\t50\t189\t37.57\t62.43
+plus\tBB_Label_Prob\t60\t227\t40.53\t59.47
+plus\tBB_Label_Prob\t70\t265\t40.75\t59.25
+plus\tBB_Label_Prob\t80\t303\t42.57\t57.43
+plus\tBB_Label_Prob\t90\t341\t43.99\t56.01
+plus\tBB_SEMANIC_Entropy\t10\t38\t44.74\t55.26
+plus\tBB_SEMANIC_Entropy\t20\t76\t51.32\t48.68
+plus\tBB_SEMANIC_Entropy\t30\t114\t50.88\t49.12
+plus\tBB_SEMANIC_Entropy\t40\t152\t49.34\t50.66
+plus\tBB_SEMANIC_Entropy\t50\t189\t48.68\t51.32
+plus\tBB_SEMANIC_Entropy\t60\t227\t49.78\t50.22
+plus\tBB_SEMANIC_Entropy\t70\t265\t47.55\t52.45
+plus\tBB_SEMANIC_Entropy\t80\t303\t47.19\t52.81
+plus\tBB_SEMANIC_Entropy\t90\t341\t46.04\t53.96
+plus\tCCP\t10\t38\t50.0\t50.0
+plus\tCCP\t20\t76\t51.32\t48.68
+plus\tCCP\t30\t114\t53.51\t46.49
+plus\tCCP\t40\t152\t51.97\t48.03
+plus\tCCP\t50\t189\t54.5\t45.5
+plus\tCCP\t60\t227\t50.66\t49.34
+plus\tCCP\t70\t265\t51.32\t48.68
+plus\tCCP\t80\t303\t48.84\t51.16
+plus\tCCP\t90\t341\t48.39\t51.61
+plus\tEIGEN_UNCERTAINTY\t10\t38\t28.95\t71.05
+plus\tEIGEN_UNCERTAINTY\t20\t76\t39.47\t60.53
+plus\tEIGEN_UNCERTAINTY\t30\t114\t40.35\t59.65
+plus\tEIGEN_UNCERTAINTY\t40\t152\t38.82\t61.18
+plus\tEIGEN_UNCERTAINTY\t50\t189\t42.33\t57.67
+plus\tEIGEN_UNCERTAINTY\t60\t227\t40.97\t59.03
+plus\tEIGEN_UNCERTAINTY\t70\t265\t43.77\t56.23
+plus\tEIGEN_UNCERTAINTY\t80\t303\t45.87\t54.13
+plus\tEIGEN_UNCERTAINTY\t90\t341\t46.04\t53.96
+plus\tEntropy\t10\t38\t52.63\t47.37
+plus\tEntropy\t20\t76\t56.58\t43.42
+plus\tEntropy\t30\t114\t50.88\t49.12
+plus\tEntropy\t40\t152\t53.29\t46.71
+plus\tEntropy\t50\t189\t53.44\t46.56
+plus\tEntropy\t60\t227\t49.34\t50.66
+plus\tEntropy\t70\t265\t49.06\t50.94
+plus\tEntropy\t80\t303\t48.84\t51.16
+plus\tEntropy\t90\t341\t46.92\t53.08
+plus\tLEXICAL_SIM\t10\t38\t31.58\t68.42
+plus\tLEXICAL_SIM\t20\t76\t32.89\t67.11
+plus\tLEXICAL_SIM\t30\t114\t34.21\t65.79
+plus\tLEXICAL_SIM\t40\t152\t36.18\t63.82
+plus\tLEXICAL_SIM\t50\t189\t37.04\t62.96
+plus\tLEXICAL_SIM\t60\t227\t38.77\t61.23
+plus\tLEXICAL_SIM\t70\t265\t41.89\t58.11
+plus\tLEXICAL_SIM\t80\t303\t41.91\t58.09
+plus\tLEXICAL_SIM\t90\t341\t44.28\t55.72
+plus\tMSP\t10\t38\t73.68\t26.32
+plus\tMSP\t20\t76\t68.42\t31.58
+plus\tMSP\t30\t114\t68.42\t31.58
+plus\tMSP\t40\t152\t67.11\t32.89
+plus\tMSP\t50\t189\t63.49\t36.51
+plus\tMSP\t60\t227\t59.91\t40.09
+plus\tMSP\t70\t265\t57.74\t42.26
+plus\tMSP\t80\t303\t53.14\t46.86
+plus\tMSP\t90\t341\t49.56\t50.44
+plus\tSEMANTIC_SET\t10\t38\t39.47\t60.53
+plus\tSEMANTIC_SET\t20\t76\t43.42\t56.58
+plus\tSEMANTIC_SET\t30\t114\t40.35\t59.65
+plus\tSEMANTIC_SET\t40\t152\t39.47\t60.53
+plus\tSEMANTIC_SET\t50\t189\t41.27\t58.73
+plus\tSEMANTIC_SET\t60\t227\t43.61\t56.39
+plus\tSEMANTIC_SET\t70\t265\t44.53\t55.47
+plus\tSEMANTIC_SET\t80\t303\t44.55\t55.45
+plus\tSEMANTIC_SET\t90\t341\t45.16\t54.84
+plus\tTokenSAR\t10\t38\t60.53\t39.47
+plus\tTokenSAR\t20\t76\t60.53\t39.47
+plus\tTokenSAR\t30\t114\t53.51\t46.49
+plus\tTokenSAR\t40\t152\t53.29\t46.71
+plus\tTokenSAR\t50\t189\t53.97\t46.03
+plus\tTokenSAR\t60\t227\t50.66\t49.34
+plus\tTokenSAR\t70\t265\t50.57\t49.43
+plus\tTokenSAR\t80\t303\t49.17\t50.83
+plus\tTokenSAR\t90\t341\t46.63\t53.37
+plus\tUCPMI\t10\t38\t57.89\t42.11
+plus\tUCPMI\t20\t76\t53.95\t46.05
+plus\tUCPMI\t30\t114\t50.88\t49.12
+plus\tUCPMI\t40\t152\t52.63\t47.37
+plus\tUCPMI\t50\t189\t51.32\t48.68
+plus\tUCPMI\t60\t227\t50.22\t49.78
+plus\tUCPMI\t70\t265\t50.19\t49.81
+plus\tUCPMI\t80\t303\t48.84\t51.16
+plus\tUCPMI\t90\t341\t46.33\t53.67
+plus\tUFR\t10\t38\t39.47\t60.53
+plus\tUFR\t20\t76\t47.37\t52.63
+plus\tUFR\t30\t114\t44.74\t55.26
+plus\tUFR\t40\t152\t44.08\t55.92
+plus\tUFR\t50\t189\t43.39\t56.61
+plus\tUFR\t60\t227\t44.49\t55.51
+plus\tUFR\t70\t265\t45.28\t54.72
+plus\tUFR\t80\t303\t45.87\t54.13
+plus\tUFR\t90\t341\t47.8\t52.2
+plus\tUHS\t10\t38\t44.74\t55.26
+plus\tUHS\t20\t76\t50.0\t50.0
+plus\tUHS\t30\t114\t50.88\t49.12
+plus\tUHS\t40\t152\t48.68\t51.32
+plus\tUHS\t50\t189\t48.15\t51.85
+plus\tUHS\t60\t227\t49.34\t50.66
+plus\tUHS\t70\t265\t47.55\t52.45
+plus\tUHS\t80\t303\t46.86\t53.14
+plus\tUHS\t90\t341\t46.04\t53.96
+plus\tUPMI\t10\t38\t65.79\t34.21
+plus\tUPMI\t20\t76\t65.79\t34.21
+plus\tUPMI\t30\t114\t62.28\t37.72
+plus\tUPMI\t40\t152\t57.24\t42.76
+plus\tUPMI\t50\t189\t57.14\t42.86
+plus\tUPMI\t60\t227\t56.83\t43.17
+plus\tUPMI\t70\t265\t54.72\t45.28
+plus\tUPMI\t80\t303\t51.49\t48.51
+plus\tUPMI\t90\t341\t49.56\t50.44
+plus\tUPerp\t10\t38\t60.53\t39.47
+plus\tUPerp\t20\t76\t53.95\t46.05
+plus\tUPerp\t30\t114\t51.75\t48.25
+plus\tUPerp\t40\t152\t52.63\t47.37
+plus\tUPerp\t50\t189\t51.32\t48.68
+plus\tUPerp\t60\t227\t50.22\t49.78
+plus\tUPerp\t70\t265\t50.19\t49.81
+plus\tUPerp\t80\t303\t48.84\t51.16
+plus\tUPerp\t90\t341\t46.63\t53.37
+plus\tURD\t10\t38\t44.74\t55.26
+plus\tURD\t20\t76\t32.89\t67.11
+plus\tURD\t30\t114\t38.6\t61.4
+plus\tURD\t40\t152\t39.47\t60.53
+plus\tURD\t50\t189\t38.62\t61.38
+plus\tURD\t60\t227\t41.41\t58.59
+plus\tURD\t70\t265\t43.77\t56.23
+plus\tURD\t80\t303\t43.23\t56.77
+plus\tURD\t90\t341\t44.57\t55.43
+plus\tUSE\t10\t38\t65.79\t34.21
+plus\tUSE\t20\t76\t63.16\t36.84
+plus\tUSE\t30\t114\t58.77\t41.23
+plus\tUSE\t40\t152\t57.89\t42.11
+plus\tUSE\t50\t189\t54.5\t45.5
+plus\tUSE\t60\t227\t54.19\t45.81
+plus\tUSE\t70\t265\t53.21\t46.79
+plus\tUSE\t80\t303\t49.83\t50.17
+plus\tUSE\t90\t341\t48.09\t51.91
+plus\tUSENTSAR\t10\t38\t55.26\t44.74
+plus\tUSENTSAR\t20\t76\t57.89\t42.11
+plus\tUSENTSAR\t30\t114\t57.02\t42.98
+plus\tUSENTSAR\t40\t152\t53.95\t46.05
+plus\tUSENTSAR\t50\t189\t52.38\t47.62
+plus\tUSENTSAR\t60\t227\t50.22\t49.78
+plus\tUSENTSAR\t70\t265\t51.32\t48.68
+plus\tUSENTSAR\t80\t303\t49.83\t50.17
+plus\tUSENTSAR\t90\t341\t46.63\t53.37`
+        }
+        ,
+        {
+          id: 'pivot-humaneval-deepseek',
+          data: `split\tmetric\tcoverage_pct\tk\taccuracy_pct\trisk_pct
+base\tBB_Label_Prob\t10\t17\t76.47\t23.53
+base\tBB_Label_Prob\t20\t33\t72.73\t27.27
+base\tBB_Label_Prob\t30\t50\t62.0\t38.0
+base\tBB_Label_Prob\t40\t66\t66.67\t33.33
+base\tBB_Label_Prob\t50\t82\t69.51\t30.49
+base\tBB_Label_Prob\t60\t99\t70.71\t29.29
+base\tBB_Label_Prob\t70\t115\t73.04\t26.96
+base\tBB_Label_Prob\t80\t132\t76.52\t23.48
+base\tBB_Label_Prob\t90\t148\t75.68\t24.32
+base\tBB_SEMANIC_Entropy\t10\t17\t76.47\t23.53
+base\tBB_SEMANIC_Entropy\t20\t33\t81.82\t18.18
+base\tBB_SEMANIC_Entropy\t30\t50\t82.0\t18.0
+base\tBB_SEMANIC_Entropy\t40\t66\t80.3\t19.7
+base\tBB_SEMANIC_Entropy\t50\t82\t81.71\t18.29
+base\tBB_SEMANIC_Entropy\t60\t99\t79.8\t20.2
+base\tBB_SEMANIC_Entropy\t70\t115\t79.13\t20.87
+base\tBB_SEMANIC_Entropy\t80\t132\t80.3\t19.7
+base\tBB_SEMANIC_Entropy\t90\t148\t79.73\t20.27
+base\tCCP\t10\t17\t82.35\t17.65
+base\tCCP\t20\t33\t72.73\t27.27
+base\tCCP\t30\t50\t76.0\t24.0
+base\tCCP\t40\t66\t75.76\t24.24
+base\tCCP\t50\t82\t78.05\t21.95
+base\tCCP\t60\t99\t76.77\t23.23
+base\tCCP\t70\t115\t74.78\t25.22
+base\tCCP\t80\t132\t76.52\t23.48
+base\tCCP\t90\t148\t75.68\t24.32
+base\tEIGEN_UNCERTAINTY\t10\t17\t82.35\t17.65
+base\tEIGEN_UNCERTAINTY\t20\t33\t78.79\t21.21
+base\tEIGEN_UNCERTAINTY\t30\t50\t84.0\t16.0
+base\tEIGEN_UNCERTAINTY\t40\t66\t81.82\t18.18
+base\tEIGEN_UNCERTAINTY\t50\t82\t75.61\t24.39
+base\tEIGEN_UNCERTAINTY\t60\t99\t75.76\t24.24
+base\tEIGEN_UNCERTAINTY\t70\t115\t75.65\t24.35
+base\tEIGEN_UNCERTAINTY\t80\t132\t75.76\t24.24
+base\tEIGEN_UNCERTAINTY\t90\t148\t76.35\t23.65
+base\tEntropy\t10\t17\t94.12\t5.88
+base\tEntropy\t20\t33\t84.85\t15.15
+base\tEntropy\t30\t50\t86.0\t14.0
+base\tEntropy\t40\t66\t84.85\t15.15
+base\tEntropy\t50\t82\t84.15\t15.85
+base\tEntropy\t60\t99\t81.82\t18.18
+base\tEntropy\t70\t115\t79.13\t20.87
+base\tEntropy\t80\t132\t80.3\t19.7
+base\tEntropy\t90\t148\t77.7\t22.3
+base\tLEXICAL_SIM\t10\t17\t41.18\t58.82
+base\tLEXICAL_SIM\t20\t33\t57.58\t42.42
+base\tLEXICAL_SIM\t30\t50\t62.0\t38.0
+base\tLEXICAL_SIM\t40\t66\t62.12\t37.88
+base\tLEXICAL_SIM\t50\t82\t65.85\t34.15
+base\tLEXICAL_SIM\t60\t99\t70.71\t29.29
+base\tLEXICAL_SIM\t70\t115\t73.04\t26.96
+base\tLEXICAL_SIM\t80\t132\t75.76\t24.24
+base\tLEXICAL_SIM\t90\t148\t76.35\t23.65
+base\tMSP\t10\t17\t88.24\t11.76
+base\tMSP\t20\t33\t87.88\t12.12
+base\tMSP\t30\t50\t90.0\t10.0
+base\tMSP\t40\t66\t89.39\t10.61
+base\tMSP\t50\t82\t86.59\t13.41
+base\tMSP\t60\t99\t85.86\t14.14
+base\tMSP\t70\t115\t83.48\t16.52
+base\tMSP\t80\t132\t81.82\t18.18
+base\tMSP\t90\t148\t79.05\t20.95
+base\tSEMANTIC_SET\t10\t17\t82.35\t17.65
+base\tSEMANTIC_SET\t20\t33\t81.82\t18.18
+base\tSEMANTIC_SET\t30\t50\t84.0\t16.0
+base\tSEMANTIC_SET\t40\t66\t83.33\t16.67
+base\tSEMANTIC_SET\t50\t82\t81.71\t18.29
+base\tSEMANTIC_SET\t60\t99\t81.82\t18.18
+base\tSEMANTIC_SET\t70\t115\t80.87\t19.13
+base\tSEMANTIC_SET\t80\t132\t76.52\t23.48
+base\tSEMANTIC_SET\t90\t148\t76.35\t23.65
+base\tTokenSAR\t10\t17\t94.12\t5.88
+base\tTokenSAR\t20\t33\t87.88\t12.12
+base\tTokenSAR\t30\t50\t88.0\t12.0
+base\tTokenSAR\t40\t66\t87.88\t12.12
+base\tTokenSAR\t50\t82\t85.37\t14.63
+base\tTokenSAR\t60\t99\t81.82\t18.18
+base\tTokenSAR\t70\t115\t80.0\t20.0
+base\tTokenSAR\t80\t132\t80.3\t19.7
+base\tTokenSAR\t90\t148\t78.38\t21.62
+base\tUCPMI\t10\t17\t94.12\t5.88
+base\tUCPMI\t20\t33\t87.88\t12.12
+base\tUCPMI\t30\t50\t90.0\t10.0
+base\tUCPMI\t40\t66\t86.36\t13.64
+base\tUCPMI\t50\t82\t85.37\t14.63
+base\tUCPMI\t60\t99\t80.81\t19.19
+base\tUCPMI\t70\t115\t80.87\t19.13
+base\tUCPMI\t80\t132\t79.55\t20.45
+base\tUCPMI\t90\t148\t77.7\t22.3
+base\tUFR\t10\t17\t58.82\t41.18
+base\tUFR\t20\t33\t63.64\t36.36
+base\tUFR\t30\t50\t68.0\t32.0
+base\tUFR\t40\t66\t69.7\t30.3
+base\tUFR\t50\t82\t71.95\t28.05
+base\tUFR\t60\t99\t73.74\t26.26
+base\tUFR\t70\t115\t73.91\t26.09
+base\tUFR\t80\t132\t72.73\t27.27
+base\tUFR\t90\t148\t74.32\t25.68
+base\tUHS\t10\t17\t76.47\t23.53
+base\tUHS\t20\t33\t81.82\t18.18
+base\tUHS\t30\t50\t80.0\t20.0
+base\tUHS\t40\t66\t81.82\t18.18
+base\tUHS\t50\t82\t81.71\t18.29
+base\tUHS\t60\t99\t79.8\t20.2
+base\tUHS\t70\t115\t80.0\t20.0
+base\tUHS\t80\t132\t80.3\t19.7
+base\tUHS\t90\t148\t79.73\t20.27
+base\tUPMI\t10\t17\t76.47\t23.53
+base\tUPMI\t20\t33\t81.82\t18.18
+base\tUPMI\t30\t50\t84.0\t16.0
+base\tUPMI\t40\t66\t83.33\t16.67
+base\tUPMI\t50\t82\t81.71\t18.29
+base\tUPMI\t60\t99\t83.84\t16.16
+base\tUPMI\t70\t115\t84.35\t15.65
+base\tUPMI\t80\t132\t82.58\t17.42
+base\tUPMI\t90\t148\t79.73\t20.27
+base\tUPerp\t10\t17\t94.12\t5.88
+base\tUPerp\t20\t33\t87.88\t12.12
+base\tUPerp\t30\t50\t90.0\t10.0
+base\tUPerp\t40\t66\t86.36\t13.64
+base\tUPerp\t50\t82\t85.37\t14.63
+base\tUPerp\t60\t99\t80.81\t19.19
+base\tUPerp\t70\t115\t80.87\t19.13
+base\tUPerp\t80\t132\t79.55\t20.45
+base\tUPerp\t90\t148\t77.7\t22.3
+base\tURD\t10\t17\t70.59\t29.41
+base\tURD\t20\t33\t63.64\t36.36
+base\tURD\t30\t50\t70.0\t30.0
+base\tURD\t40\t66\t69.7\t30.3
+base\tURD\t50\t82\t68.29\t31.71
+base\tURD\t60\t99\t70.71\t29.29
+base\tURD\t70\t115\t72.17\t27.83
+base\tURD\t80\t132\t75.0\t25.0
+base\tURD\t90\t148\t75.0\t25.0
+base\tUSE\t10\t17\t94.12\t5.88
+base\tUSE\t20\t33\t87.88\t12.12
+base\tUSE\t30\t50\t86.0\t14.0
+base\tUSE\t40\t66\t86.36\t13.64
+base\tUSE\t50\t82\t84.15\t15.85
+base\tUSE\t60\t99\t83.84\t16.16
+base\tUSE\t70\t115\t84.35\t15.65
+base\tUSE\t80\t132\t81.06\t18.94
+base\tUSE\t90\t148\t78.38\t21.62
+base\tUSENTSAR\t10\t17\t82.35\t17.65
+base\tUSENTSAR\t20\t33\t90.91\t9.09
+base\tUSENTSAR\t30\t50\t86.0\t14.0
+base\tUSENTSAR\t40\t66\t84.85\t15.15
+base\tUSENTSAR\t50\t82\t84.15\t15.85
+base\tUSENTSAR\t60\t99\t81.82\t18.18
+base\tUSENTSAR\t70\t115\t81.74\t18.26
+base\tUSENTSAR\t80\t132\t81.06\t18.94
+base\tUSENTSAR\t90\t148\t80.41\t19.59
+plus\tBB_Label_Prob\t10\t17\t70.59\t29.41
+plus\tBB_Label_Prob\t20\t33\t63.64\t36.36
+plus\tBB_Label_Prob\t30\t50\t52.0\t48.0
+plus\tBB_Label_Prob\t40\t66\t59.09\t40.91
+plus\tBB_Label_Prob\t50\t82\t62.2\t37.8
+plus\tBB_Label_Prob\t60\t99\t64.65\t35.35
+plus\tBB_Label_Prob\t70\t115\t66.96\t33.04
+plus\tBB_Label_Prob\t80\t132\t70.45\t29.55
+plus\tBB_Label_Prob\t90\t148\t69.59\t30.41
+plus\tBB_SEMANIC_Entropy\t10\t17\t76.47\t23.53
+plus\tBB_SEMANIC_Entropy\t20\t33\t78.79\t21.21
+plus\tBB_SEMANIC_Entropy\t30\t50\t80.0\t20.0
+plus\tBB_SEMANIC_Entropy\t40\t66\t77.27\t22.73
+plus\tBB_SEMANIC_Entropy\t50\t82\t78.05\t21.95
+plus\tBB_SEMANIC_Entropy\t60\t99\t76.77\t23.23
+plus\tBB_SEMANIC_Entropy\t70\t115\t73.91\t26.09
+plus\tBB_SEMANIC_Entropy\t80\t132\t74.24\t25.76
+plus\tBB_SEMANIC_Entropy\t90\t148\t72.97\t27.03
+plus\tCCP\t10\t17\t82.35\t17.65
+plus\tCCP\t20\t33\t66.67\t33.33
+plus\tCCP\t30\t50\t72.0\t28.0
+plus\tCCP\t40\t66\t72.73\t27.27
+plus\tCCP\t50\t82\t75.61\t24.39
+plus\tCCP\t60\t99\t73.74\t26.26
+plus\tCCP\t70\t115\t70.43\t29.57
+plus\tCCP\t80\t132\t71.97\t28.03
+plus\tCCP\t90\t148\t70.95\t29.05
+plus\tEIGEN_UNCERTAINTY\t10\t17\t82.35\t17.65
+plus\tEIGEN_UNCERTAINTY\t20\t33\t72.73\t27.27
+plus\tEIGEN_UNCERTAINTY\t30\t50\t80.0\t20.0
+plus\tEIGEN_UNCERTAINTY\t40\t66\t74.24\t25.76
+plus\tEIGEN_UNCERTAINTY\t50\t82\t69.51\t30.49
+plus\tEIGEN_UNCERTAINTY\t60\t99\t68.69\t31.31
+plus\tEIGEN_UNCERTAINTY\t70\t115\t68.7\t31.3
+plus\tEIGEN_UNCERTAINTY\t80\t132\t68.94\t31.06
+plus\tEIGEN_UNCERTAINTY\t90\t148\t70.27\t29.73
+plus\tEntropy\t10\t17\t94.12\t5.88
+plus\tEntropy\t20\t33\t84.85\t15.15
+plus\tEntropy\t30\t50\t84.0\t16.0
+plus\tEntropy\t40\t66\t80.3\t19.7
+plus\tEntropy\t50\t82\t78.05\t21.95
+plus\tEntropy\t60\t99\t75.76\t24.24
+plus\tEntropy\t70\t115\t72.17\t27.83
+plus\tEntropy\t80\t132\t74.24\t25.76
+plus\tEntropy\t90\t148\t71.62\t28.38
+plus\tLEXICAL_SIM\t10\t17\t41.18\t58.82
+plus\tLEXICAL_SIM\t20\t33\t51.52\t48.48
+plus\tLEXICAL_SIM\t30\t50\t52.0\t48.0
+plus\tLEXICAL_SIM\t40\t66\t54.55\t45.45
+plus\tLEXICAL_SIM\t50\t82\t58.54\t41.46
+plus\tLEXICAL_SIM\t60\t99\t64.65\t35.35
+plus\tLEXICAL_SIM\t70\t115\t66.96\t33.04
+plus\tLEXICAL_SIM\t80\t132\t68.94\t31.06
+plus\tLEXICAL_SIM\t90\t148\t69.59\t30.41
+plus\tMSP\t10\t17\t82.35\t17.65
+plus\tMSP\t20\t33\t78.79\t21.21
+plus\tMSP\t30\t50\t82.0\t18.0
+plus\tMSP\t40\t66\t80.3\t19.7
+plus\tMSP\t50\t82\t79.27\t20.73
+plus\tMSP\t60\t99\t79.8\t20.2
+plus\tMSP\t70\t115\t78.26\t21.74
+plus\tMSP\t80\t132\t76.52\t23.48
+plus\tMSP\t90\t148\t72.97\t27.03
+plus\tSEMANTIC_SET\t10\t17\t82.35\t17.65
+plus\tSEMANTIC_SET\t20\t33\t78.79\t21.21
+plus\tSEMANTIC_SET\t30\t50\t82.0\t18.0
+plus\tSEMANTIC_SET\t40\t66\t80.3\t19.7
+plus\tSEMANTIC_SET\t50\t82\t78.05\t21.95
+plus\tSEMANTIC_SET\t60\t99\t77.78\t22.22
+plus\tSEMANTIC_SET\t70\t115\t77.39\t22.61
+plus\tSEMANTIC_SET\t80\t132\t71.21\t28.79
+plus\tSEMANTIC_SET\t90\t148\t71.62\t28.38
+plus\tTokenSAR\t10\t17\t94.12\t5.88
+plus\tTokenSAR\t20\t33\t84.85\t15.15
+plus\tTokenSAR\t30\t50\t84.0\t16.0
+plus\tTokenSAR\t40\t66\t83.33\t16.67
+plus\tTokenSAR\t50\t82\t79.27\t20.73
+plus\tTokenSAR\t60\t99\t73.74\t26.26
+plus\tTokenSAR\t70\t115\t72.17\t27.83
+plus\tTokenSAR\t80\t132\t73.48\t26.52
+plus\tTokenSAR\t90\t148\t72.3\t27.7
+plus\tUCPMI\t10\t17\t94.12\t5.88
+plus\tUCPMI\t20\t33\t84.85\t15.15
+plus\tUCPMI\t30\t50\t86.0\t14.0
+plus\tUCPMI\t40\t66\t81.82\t18.18
+plus\tUCPMI\t50\t82\t79.27\t20.73
+plus\tUCPMI\t60\t99\t72.73\t27.27
+plus\tUCPMI\t70\t115\t73.04\t26.96
+plus\tUCPMI\t80\t132\t72.73\t27.27
+plus\tUCPMI\t90\t148\t70.95\t29.05
+plus\tUFR\t10\t17\t52.94\t47.06
+plus\tUFR\t20\t33\t60.61\t39.39
+plus\tUFR\t30\t50\t64.0\t36.0
+plus\tUFR\t40\t66\t65.15\t34.85
+plus\tUFR\t50\t82\t67.07\t32.93
+plus\tUFR\t60\t99\t65.66\t34.34
+plus\tUFR\t70\t115\t66.09\t33.91
+plus\tUFR\t80\t132\t65.91\t34.09
+plus\tUFR\t90\t148\t67.57\t32.43
+plus\tUHS\t10\t17\t76.47\t23.53
+plus\tUHS\t20\t33\t78.79\t21.21
+plus\tUHS\t30\t50\t78.0\t22.0
+plus\tUHS\t40\t66\t78.79\t21.21
+plus\tUHS\t50\t82\t78.05\t21.95
+plus\tUHS\t60\t99\t76.77\t23.23
+plus\tUHS\t70\t115\t74.78\t25.22
+plus\tUHS\t80\t132\t74.24\t25.76
+plus\tUHS\t90\t148\t72.97\t27.03
+plus\tUPMI\t10\t17\t70.59\t29.41
+plus\tUPMI\t20\t33\t72.73\t27.27
+plus\tUPMI\t30\t50\t76.0\t24.0
+plus\tUPMI\t40\t66\t74.24\t25.76
+plus\tUPMI\t50\t82\t74.39\t25.61
+plus\tUPMI\t60\t99\t77.78\t22.22
+plus\tUPMI\t70\t115\t79.13\t20.87
+plus\tUPMI\t80\t132\t76.52\t23.48
+plus\tUPMI\t90\t148\t73.65\t26.35
+plus\tUPerp\t10\t17\t94.12\t5.88
+plus\tUPerp\t20\t33\t84.85\t15.15
+plus\tUPerp\t30\t50\t86.0\t14.0
+plus\tUPerp\t40\t66\t81.82\t18.18
+plus\tUPerp\t50\t82\t79.27\t20.73
+plus\tUPerp\t60\t99\t72.73\t27.27
+plus\tUPerp\t70\t115\t73.04\t26.96
+plus\tUPerp\t80\t132\t72.73\t27.27
+plus\tUPerp\t90\t148\t70.95\t29.05
+plus\tURD\t10\t17\t64.71\t35.29
+plus\tURD\t20\t33\t60.61\t39.39
+plus\tURD\t30\t50\t66.0\t34.0
+plus\tURD\t40\t66\t65.15\t34.85
+plus\tURD\t50\t82\t62.2\t37.8
+plus\tURD\t60\t99\t63.64\t36.36
+plus\tURD\t70\t115\t65.22\t34.78
+plus\tURD\t80\t132\t67.42\t32.58
+plus\tURD\t90\t148\t68.24\t31.76
+plus\tUSE\t10\t17\t88.24\t11.76
+plus\tUSE\t20\t33\t81.82\t18.18
+plus\tUSE\t30\t50\t80.0\t20.0
+plus\tUSE\t40\t66\t80.3\t19.7
+plus\tUSE\t50\t82\t79.27\t20.73
+plus\tUSE\t60\t99\t79.8\t20.2
+plus\tUSE\t70\t115\t80.0\t20.0
+plus\tUSE\t80\t132\t76.52\t23.48
+plus\tUSE\t90\t148\t72.3\t27.7
+plus\tUSENTSAR\t10\t17\t82.35\t17.65
+plus\tUSENTSAR\t20\t33\t87.88\t12.12
+plus\tUSENTSAR\t30\t50\t82.0\t18.0
+plus\tUSENTSAR\t40\t66\t80.3\t19.7
+plus\tUSENTSAR\t50\t82\t80.49\t19.51
+plus\tUSENTSAR\t60\t99\t77.78\t22.22
+plus\tUSENTSAR\t70\t115\t78.26\t21.74
+plus\tUSENTSAR\t80\t132\t75.76\t24.24
+plus\tUSENTSAR\t90\t148\t73.65\t26.35`        }
+        ,
+        {
+          id: 'pivot-mbpp-deepseek',
+          data: `split\tmetric\tcoverage_pct\tk\taccuracy_pct\trisk_pct
+base\tBB_Label_Prob\t10\t38\t50.0\t50.0
+base\tBB_Label_Prob\t20\t76\t60.53\t39.47
+base\tBB_Label_Prob\t30\t114\t64.04\t35.96
+base\tBB_Label_Prob\t40\t152\t67.11\t32.89
+base\tBB_Label_Prob\t50\t189\t68.25\t31.75
+base\tBB_Label_Prob\t60\t227\t68.28\t31.72
+base\tBB_Label_Prob\t70\t265\t70.19\t29.81
+base\tBB_Label_Prob\t80\t303\t71.29\t28.71
+base\tBB_Label_Prob\t90\t341\t73.02\t26.98
+base\tBB_SEMANIC_Entropy\t10\t38\t84.21\t15.79
+base\tBB_SEMANIC_Entropy\t20\t76\t78.95\t21.05
+base\tBB_SEMANIC_Entropy\t30\t114\t81.58\t18.42
+base\tBB_SEMANIC_Entropy\t40\t152\t80.92\t19.08
+base\tBB_SEMANIC_Entropy\t50\t189\t81.48\t18.52
+base\tBB_SEMANIC_Entropy\t60\t227\t79.3\t20.7
+base\tBB_SEMANIC_Entropy\t70\t265\t76.98\t23.02
+base\tBB_SEMANIC_Entropy\t80\t303\t75.58\t24.42
+base\tBB_SEMANIC_Entropy\t90\t341\t74.49\t25.51
+base\tCCP\t10\t38\t84.21\t15.79
+base\tCCP\t20\t76\t80.26\t19.74
+base\tCCP\t30\t114\t78.95\t21.05
+base\tCCP\t40\t152\t77.63\t22.37
+base\tCCP\t50\t189\t75.13\t24.87
+base\tCCP\t60\t227\t75.33\t24.67
+base\tCCP\t70\t265\t76.98\t23.02
+base\tCCP\t80\t303\t75.58\t24.42
+base\tCCP\t90\t341\t75.95\t24.05
+base\tEIGEN_UNCERTAINTY\t10\t38\t76.32\t23.68
+base\tEIGEN_UNCERTAINTY\t20\t76\t78.95\t21.05
+base\tEIGEN_UNCERTAINTY\t30\t114\t76.32\t23.68
+base\tEIGEN_UNCERTAINTY\t40\t152\t76.97\t23.03
+base\tEIGEN_UNCERTAINTY\t50\t189\t75.13\t24.87
+base\tEIGEN_UNCERTAINTY\t60\t227\t71.81\t28.19
+base\tEIGEN_UNCERTAINTY\t70\t265\t73.58\t26.42
+base\tEIGEN_UNCERTAINTY\t80\t303\t73.6\t26.4
+base\tEIGEN_UNCERTAINTY\t90\t341\t73.9\t26.1
+base\tEntropy\t10\t38\t81.58\t18.42
+base\tEntropy\t20\t76\t78.95\t21.05
+base\tEntropy\t30\t114\t74.56\t25.44
+base\tEntropy\t40\t152\t75.66\t24.34
+base\tEntropy\t50\t189\t77.25\t22.75
+base\tEntropy\t60\t227\t77.97\t22.03
+base\tEntropy\t70\t265\t77.74\t22.26
+base\tEntropy\t80\t303\t78.22\t21.78
+base\tEntropy\t90\t341\t75.66\t24.34
+base\tLEXICAL_SIM\t10\t38\t52.63\t47.37
+base\tLEXICAL_SIM\t20\t76\t59.21\t40.79
+base\tLEXICAL_SIM\t30\t114\t63.16\t36.84
+base\tLEXICAL_SIM\t40\t152\t61.84\t38.16
+base\tLEXICAL_SIM\t50\t189\t65.08\t34.92
+base\tLEXICAL_SIM\t60\t227\t68.28\t31.72
+base\tLEXICAL_SIM\t70\t265\t71.32\t28.68
+base\tLEXICAL_SIM\t80\t303\t71.62\t28.38
+base\tLEXICAL_SIM\t90\t341\t73.9\t26.1
+base\tMSP\t10\t38\t78.95\t21.05
+base\tMSP\t20\t76\t81.58\t18.42
+base\tMSP\t30\t114\t82.46\t17.54
+base\tMSP\t40\t152\t84.87\t15.13
+base\tMSP\t50\t189\t82.54\t17.46
+base\tMSP\t60\t227\t81.5\t18.5
+base\tMSP\t70\t265\t79.25\t20.75
+base\tMSP\t80\t303\t78.55\t21.45
+base\tMSP\t90\t341\t76.83\t23.17
+base\tSEMANTIC_SET\t10\t38\t84.21\t15.79
+base\tSEMANTIC_SET\t20\t76\t81.58\t18.42
+base\tSEMANTIC_SET\t30\t114\t79.82\t20.18
+base\tSEMANTIC_SET\t40\t152\t76.32\t23.68
+base\tSEMANTIC_SET\t50\t189\t77.25\t22.75
+base\tSEMANTIC_SET\t60\t227\t74.89\t25.11
+base\tSEMANTIC_SET\t70\t265\t73.96\t26.04
+base\tSEMANTIC_SET\t80\t303\t74.26\t25.74
+base\tSEMANTIC_SET\t90\t341\t73.9\t26.1
+base\tTokenSAR\t10\t38\t78.95\t21.05
+base\tTokenSAR\t20\t76\t73.68\t26.32
+base\tTokenSAR\t30\t114\t76.32\t23.68
+base\tTokenSAR\t40\t152\t78.95\t21.05
+base\tTokenSAR\t50\t189\t79.89\t20.11
+base\tTokenSAR\t60\t227\t77.97\t22.03
+base\tTokenSAR\t70\t265\t77.36\t22.64
+base\tTokenSAR\t80\t303\t76.57\t23.43
+base\tTokenSAR\t90\t341\t75.95\t24.05
+base\tUCPMI\t10\t38\t84.21\t15.79
+base\tUCPMI\t20\t76\t76.32\t23.68
+base\tUCPMI\t30\t114\t76.32\t23.68
+base\tUCPMI\t40\t152\t76.32\t23.68
+base\tUCPMI\t50\t189\t76.72\t23.28
+base\tUCPMI\t60\t227\t78.41\t21.59
+base\tUCPMI\t70\t265\t78.49\t21.51
+base\tUCPMI\t80\t303\t77.56\t22.44
+base\tUCPMI\t90\t341\t75.37\t24.63
+base\tUFR\t10\t38\t55.26\t44.74
+base\tUFR\t20\t76\t60.53\t39.47
+base\tUFR\t30\t114\t64.91\t35.09
+base\tUFR\t40\t152\t71.05\t28.95
+base\tUFR\t50\t189\t74.07\t25.93
+base\tUFR\t60\t227\t74.01\t25.99
+base\tUFR\t70\t265\t74.34\t25.66
+base\tUFR\t80\t303\t73.6\t26.4
+base\tUFR\t90\t341\t73.61\t26.39
+base\tUHS\t10\t38\t84.21\t15.79
+base\tUHS\t20\t76\t78.95\t21.05
+base\tUHS\t30\t114\t81.58\t18.42
+base\tUHS\t40\t152\t80.92\t19.08
+base\tUHS\t50\t189\t81.48\t18.52
+base\tUHS\t60\t227\t79.3\t20.7
+base\tUHS\t70\t265\t76.98\t23.02
+base\tUHS\t80\t303\t75.58\t24.42
+base\tUHS\t90\t341\t74.49\t25.51
+base\tUPMI\t10\t38\t71.05\t28.95
+base\tUPMI\t20\t76\t77.63\t22.37
+base\tUPMI\t30\t114\t80.7\t19.3
+base\tUPMI\t40\t152\t79.61\t20.39
+base\tUPMI\t50\t189\t80.95\t19.05
+base\tUPMI\t60\t227\t80.18\t19.82
+base\tUPMI\t70\t265\t80.0\t20.0
+base\tUPMI\t80\t303\t77.89\t22.11
+base\tUPMI\t90\t341\t76.54\t23.46
+base\tUPerp\t10\t38\t84.21\t15.79
+base\tUPerp\t20\t76\t76.32\t23.68
+base\tUPerp\t30\t114\t76.32\t23.68
+base\tUPerp\t40\t152\t76.32\t23.68
+base\tUPerp\t50\t189\t76.72\t23.28
+base\tUPerp\t60\t227\t78.41\t21.59
+base\tUPerp\t70\t265\t78.49\t21.51
+base\tUPerp\t80\t303\t77.56\t22.44
+base\tUPerp\t90\t341\t75.37\t24.63
+base\tURD\t10\t38\t63.16\t36.84
+base\tURD\t20\t76\t59.21\t40.79
+base\tURD\t30\t114\t63.16\t36.84
+base\tURD\t40\t152\t67.11\t32.89
+base\tURD\t50\t189\t71.43\t28.57
+base\tURD\t60\t227\t73.13\t26.87
+base\tURD\t70\t265\t72.83\t27.17
+base\tURD\t80\t303\t72.94\t27.06
+base\tURD\t90\t341\t73.31\t26.69
+base\tUSE\t10\t38\t81.58\t18.42
+base\tUSE\t20\t76\t86.84\t13.16
+base\tUSE\t30\t114\t86.84\t13.16
+base\tUSE\t40\t152\t85.53\t14.47
+base\tUSE\t50\t189\t83.6\t16.4
+base\tUSE\t60\t227\t81.5\t18.5
+base\tUSE\t70\t265\t78.87\t21.13
+base\tUSE\t80\t303\t78.22\t21.78
+base\tUSE\t90\t341\t76.83\t23.17
+base\tUSENTSAR\t10\t38\t92.11\t7.89
+base\tUSENTSAR\t20\t76\t84.21\t15.79
+base\tUSENTSAR\t30\t114\t82.46\t17.54
+base\tUSENTSAR\t40\t152\t82.24\t17.76
+base\tUSENTSAR\t50\t189\t79.89\t20.11
+base\tUSENTSAR\t60\t227\t78.85\t21.15
+base\tUSENTSAR\t70\t265\t78.11\t21.89
+base\tUSENTSAR\t80\t303\t78.22\t21.78
+base\tUSENTSAR\t90\t341\t77.13\t22.87
+plus\tBB_Label_Prob\t10\t38\t36.84\t63.16
+plus\tBB_Label_Prob\t20\t76\t50.0\t50.0
+plus\tBB_Label_Prob\t30\t114\t54.39\t45.61
+plus\tBB_Label_Prob\t40\t152\t57.89\t42.11
+plus\tBB_Label_Prob\t50\t189\t60.32\t39.68
+plus\tBB_Label_Prob\t60\t227\t60.35\t39.65
+plus\tBB_Label_Prob\t70\t265\t62.64\t37.36
+plus\tBB_Label_Prob\t80\t303\t63.7\t36.3
+plus\tBB_Label_Prob\t90\t341\t65.4\t34.6
+plus\tBB_SEMANIC_Entropy\t10\t38\t76.32\t23.68
+plus\tBB_SEMANIC_Entropy\t20\t76\t68.42\t31.58
+plus\tBB_SEMANIC_Entropy\t30\t114\t71.93\t28.07
+plus\tBB_SEMANIC_Entropy\t40\t152\t72.37\t27.63
+plus\tBB_SEMANIC_Entropy\t50\t189\t73.02\t26.98
+plus\tBB_SEMANIC_Entropy\t60\t227\t71.81\t28.19
+plus\tBB_SEMANIC_Entropy\t70\t265\t69.06\t30.94
+plus\tBB_SEMANIC_Entropy\t80\t303\t67.33\t32.67
+plus\tBB_SEMANIC_Entropy\t90\t341\t66.57\t33.43
+plus\tCCP\t10\t38\t76.32\t23.68
+plus\tCCP\t20\t76\t75.0\t25.0
+plus\tCCP\t30\t114\t73.68\t26.32
+plus\tCCP\t40\t152\t71.71\t28.29
+plus\tCCP\t50\t189\t69.31\t30.69
+plus\tCCP\t60\t227\t69.6\t30.4
+plus\tCCP\t70\t265\t69.81\t30.19
+plus\tCCP\t80\t303\t68.65\t31.35
+plus\tCCP\t90\t341\t68.62\t31.38
+plus\tEIGEN_UNCERTAINTY\t10\t38\t63.16\t36.84
+plus\tEIGEN_UNCERTAINTY\t20\t76\t68.42\t31.58
+plus\tEIGEN_UNCERTAINTY\t30\t114\t64.91\t35.09
+plus\tEIGEN_UNCERTAINTY\t40\t152\t65.79\t34.21
+plus\tEIGEN_UNCERTAINTY\t50\t189\t66.14\t33.86
+plus\tEIGEN_UNCERTAINTY\t60\t227\t62.56\t37.44
+plus\tEIGEN_UNCERTAINTY\t70\t265\t63.77\t36.23
+plus\tEIGEN_UNCERTAINTY\t80\t303\t63.7\t36.3
+plus\tEIGEN_UNCERTAINTY\t90\t341\t64.81\t35.19
+plus\tEntropy\t10\t38\t68.42\t31.58
+plus\tEntropy\t20\t76\t68.42\t31.58
+plus\tEntropy\t30\t114\t67.54\t32.46
+plus\tEntropy\t40\t152\t69.08\t30.92
+plus\tEntropy\t50\t189\t68.78\t31.22
+plus\tEntropy\t60\t227\t70.48\t29.52
+plus\tEntropy\t70\t265\t69.81\t30.19
+plus\tEntropy\t80\t303\t70.3\t29.7
+plus\tEntropy\t90\t341\t67.45\t32.55
+plus\tLEXICAL_SIM\t10\t38\t47.37\t52.63
+plus\tLEXICAL_SIM\t20\t76\t50.0\t50.0
+plus\tLEXICAL_SIM\t30\t114\t56.14\t43.86
+plus\tLEXICAL_SIM\t40\t152\t55.92\t44.08
+plus\tLEXICAL_SIM\t50\t189\t57.67\t42.33
+plus\tLEXICAL_SIM\t60\t227\t61.23\t38.77
+plus\tLEXICAL_SIM\t70\t265\t63.4\t36.6
+plus\tLEXICAL_SIM\t80\t303\t64.03\t35.97
+plus\tLEXICAL_SIM\t90\t341\t66.57\t33.43
+plus\tMSP\t10\t38\t68.42\t31.58
+plus\tMSP\t20\t76\t75.0\t25.0
+plus\tMSP\t30\t114\t76.32\t23.68
+plus\tMSP\t40\t152\t78.29\t21.71
+plus\tMSP\t50\t189\t75.66\t24.34
+plus\tMSP\t60\t227\t74.89\t25.11
+plus\tMSP\t70\t265\t72.08\t27.92
+plus\tMSP\t80\t303\t70.3\t29.7
+plus\tMSP\t90\t341\t68.33\t31.67
+plus\tSEMANTIC_SET\t10\t38\t73.68\t26.32
+plus\tSEMANTIC_SET\t20\t76\t71.05\t28.95
+plus\tSEMANTIC_SET\t30\t114\t71.93\t28.07
+plus\tSEMANTIC_SET\t40\t152\t69.08\t30.92
+plus\tSEMANTIC_SET\t50\t189\t69.31\t30.69
+plus\tSEMANTIC_SET\t60\t227\t67.84\t32.16
+plus\tSEMANTIC_SET\t70\t265\t67.55\t32.45
+plus\tSEMANTIC_SET\t80\t303\t67.0\t33.0
+plus\tSEMANTIC_SET\t90\t341\t66.86\t33.14
+plus\tTokenSAR\t10\t38\t65.79\t34.21
+plus\tTokenSAR\t20\t76\t64.47\t35.53
+plus\tTokenSAR\t30\t114\t67.54\t32.46
+plus\tTokenSAR\t40\t152\t70.39\t29.61
+plus\tTokenSAR\t50\t189\t72.49\t27.51
+plus\tTokenSAR\t60\t227\t70.93\t29.07
+plus\tTokenSAR\t70\t265\t69.43\t30.57
+plus\tTokenSAR\t80\t303\t68.65\t31.35
+plus\tTokenSAR\t90\t341\t68.33\t31.67
+plus\tUCPMI\t10\t38\t71.05\t28.95
+plus\tUCPMI\t20\t76\t69.74\t30.26
+plus\tUCPMI\t30\t114\t69.3\t30.7
+plus\tUCPMI\t40\t152\t67.76\t32.24
+plus\tUCPMI\t50\t189\t68.78\t31.22
+plus\tUCPMI\t60\t227\t70.04\t29.96
+plus\tUCPMI\t70\t265\t70.19\t29.81
+plus\tUCPMI\t80\t303\t69.97\t30.03
+plus\tUCPMI\t90\t341\t67.45\t32.55
+plus\tUFR\t10\t38\t50.0\t50.0
+plus\tUFR\t20\t76\t53.95\t46.05
+plus\tUFR\t30\t114\t57.02\t42.98
+plus\tUFR\t40\t152\t61.84\t38.16
+plus\tUFR\t50\t189\t65.61\t34.39
+plus\tUFR\t60\t227\t65.2\t34.8
+plus\tUFR\t70\t265\t66.42\t33.58
+plus\tUFR\t80\t303\t66.34\t33.66
+plus\tUFR\t90\t341\t66.57\t33.43
+plus\tUHS\t10\t38\t76.32\t23.68
+plus\tUHS\t20\t76\t68.42\t31.58
+plus\tUHS\t30\t114\t72.81\t27.19
+plus\tUHS\t40\t152\t71.71\t28.29
+plus\tUHS\t50\t189\t73.02\t26.98
+plus\tUHS\t60\t227\t72.25\t27.75
+plus\tUHS\t70\t265\t69.06\t30.94
+plus\tUHS\t80\t303\t67.33\t32.67
+plus\tUHS\t90\t341\t66.86\t33.14
+plus\tUPMI\t10\t38\t68.42\t31.58
+plus\tUPMI\t20\t76\t72.37\t27.63
+plus\tUPMI\t30\t114\t75.44\t24.56
+plus\tUPMI\t40\t152\t73.68\t26.32
+plus\tUPMI\t50\t189\t74.6\t25.4
+plus\tUPMI\t60\t227\t72.69\t27.31
+plus\tUPMI\t70\t265\t71.7\t28.3
+plus\tUPMI\t80\t303\t69.97\t30.03
+plus\tUPMI\t90\t341\t68.33\t31.67
+plus\tUPerp\t10\t38\t71.05\t28.95
+plus\tUPerp\t20\t76\t69.74\t30.26
+plus\tUPerp\t30\t114\t69.3\t30.7
+plus\tUPerp\t40\t152\t67.76\t32.24
+plus\tUPerp\t50\t189\t68.78\t31.22
+plus\tUPerp\t60\t227\t70.04\t29.96
+plus\tUPerp\t70\t265\t70.19\t29.81
+plus\tUPerp\t80\t303\t69.97\t30.03
+plus\tUPerp\t90\t341\t67.45\t32.55
+plus\tURD\t10\t38\t55.26\t44.74
+plus\tURD\t20\t76\t50.0\t50.0
+plus\tURD\t30\t114\t56.14\t43.86
+plus\tURD\t40\t152\t58.55\t41.45
+plus\tURD\t50\t189\t63.49\t36.51
+plus\tURD\t60\t227\t64.76\t35.24
+plus\tURD\t70\t265\t64.91\t35.09
+plus\tURD\t80\t303\t65.02\t34.98
+plus\tURD\t90\t341\t65.98\t34.02
+plus\tUSE\t10\t38\t73.68\t26.32
+plus\tUSE\t20\t76\t80.26\t19.74
+plus\tUSE\t30\t114\t78.95\t21.05
+plus\tUSE\t40\t152\t78.29\t21.71
+plus\tUSE\t50\t189\t75.66\t24.34
+plus\tUSE\t60\t227\t74.01\t25.99
+plus\tUSE\t70\t265\t70.94\t29.06
+plus\tUSE\t80\t303\t70.3\t29.7
+plus\tUSE\t90\t341\t68.91\t31.09
+plus\tUSENTSAR\t10\t38\t84.21\t15.79
+plus\tUSENTSAR\t20\t76\t75.0\t25.0
+plus\tUSENTSAR\t30\t114\t73.68\t26.32
+plus\tUSENTSAR\t40\t152\t75.0\t25.0
+plus\tUSENTSAR\t50\t189\t73.54\t26.46
+plus\tUSENTSAR\t60\t227\t70.48\t29.52
+plus\tUSENTSAR\t70\t265\t69.43\t30.57
+plus\tUSENTSAR\t80\t303\t69.64\t30.36
+plus\tUSENTSAR\t90\t341\t68.91\t31.09`        }
+      ];
+
+      function renderPivot(tableId, tsv) {
+        const host = document.getElementById(tableId);
+        if (!host) return;
+        host.innerHTML = '';
+
+        const lines = tsv.trim().split(/\n+/);
+        const header = lines.shift().split('\t');
+        const rows = lines.map(line => {
+          const [split, metric, coverage_pct, k, accuracy_pct, risk_pct] = line.split('\t');
+          return {
+            split,
+            metric,
+            coverage_pct: Number(coverage_pct),
+            k: Number(k),
+            accuracy_pct,
+            risk_pct
+          };
+        });
+
+        const metrics = Array.from(new Set(rows.map(r => r.metric)));
+        const coverageLevels = Array.from(new Set(rows.map(r => r.coverage_pct))).sort((a, b) => a - b);
+        const splits = ['base', 'plus'].filter(split => rows.some(r => r.split === split));
+
+        const thead = document.createElement('thead');
+        const row1 = document.createElement('tr');
+        const thCov = document.createElement('th');
+        thCov.textContent = 'coverage_pct';
+        thCov.rowSpan = 2;
+        row1.appendChild(thCov);
+        const thSplit = document.createElement('th');
+        thSplit.textContent = 'split';
+        thSplit.rowSpan = 2;
+        row1.appendChild(thSplit);
+        const thK = document.createElement('th');
+        thK.textContent = 'k';
+        thK.className = 'number';
+        thK.rowSpan = 2;
+        row1.appendChild(thK);
+        metrics.forEach(metric => {
+          const th = document.createElement('th');
+          th.textContent = metric.replace(/_/g, ' ');
+          th.colSpan = 2;
+          row1.appendChild(th);
+        });
+        thead.appendChild(row1);
+
+        const row2 = document.createElement('tr');
+        metrics.forEach(() => {
+          const thAcc = document.createElement('th');
+          thAcc.textContent = 'accuracy%';
+          row2.appendChild(thAcc);
+          const thRisk = document.createElement('th');
+          thRisk.textContent = 'risk%';
+          row2.appendChild(thRisk);
+        });
+        thead.appendChild(row2);
+
+        const tbody = document.createElement('tbody');
+        coverageLevels.forEach(cov => {
+          splits.forEach((split, idx) => {
+            const tr = document.createElement('tr');
+            if (idx === splits.length - 1) tr.classList.add('cov-sep');
+
+            if (idx === 0) {
+              const tdCov = document.createElement('td');
+              tdCov.textContent = cov;
+              tdCov.rowSpan = splits.length;
+              tdCov.className = 'text';
+              tr.appendChild(tdCov);
+            }
+
+            const tdSplit = document.createElement('td');
+            tdSplit.textContent = split.charAt(0).toUpperCase() + split.slice(1);
+            tdSplit.className = 'text';
+            tr.appendChild(tdSplit);
+
+            const matchForK = rows.find(r => r.coverage_pct === cov && r.split === split);
+            const tdK = document.createElement('td');
+            tdK.textContent = matchForK ? matchForK.k : '';
+            tr.appendChild(tdK);
+
+            metrics.forEach(metric => {
+              const rec = rows.find(r => r.coverage_pct === cov && r.split === split && r.metric === metric) || { accuracy_pct: '', risk_pct: '' };
+              const tdAcc = document.createElement('td');
+              tdAcc.textContent = rec.accuracy_pct;
+              tr.appendChild(tdAcc);
+              const tdRisk = document.createElement('td');
+              tdRisk.textContent = rec.risk_pct;
+              tr.appendChild(tdRisk);
+            });
+
+            tbody.appendChild(tr);
+          });
+        });
+
+        host.appendChild(thead);
+        host.appendChild(tbody);
+      }
+
+      DATASETS.forEach(ds => renderPivot(ds.id, ds.data));
+    </script>
+  </body>
+</html>
