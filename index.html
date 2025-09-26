@@ -71,7 +71,9 @@ tools. Based on our results, we provide recommendations for future research to a
     <p>
       <strong>Problem.</strong> Code generators often emit syntactically valid but semantically incorrect programs when
       uncertainty rises mid-generation. Post-hoc rejection detects errors after the fact, but still wastes compute and
-      exposes users to low-quality drafts.
+      exposes users to low-quality drafts. In this section, we provide a concise overview of adaptive abstention (Figure 1), 
+        emphasizing how it can inspire future research directions and motivate researchers to explore new avenues for 
+        improving reliability and decision-making.
     </p>
     <p>
       <strong>Definition.</strong> <em>Adaptive abstention</em> is an inference-time control policy that halts or defers
@@ -82,7 +84,7 @@ tools. Based on our results, we provide recommendations for future research to a
 
     <!-- Diagram (no download link) -->
     <figure style="margin:1rem 0">
-      <img src="https://raw.githubusercontent.com/CODEAIResearch/CodeGenUncertainty/gt-pages/technique_proposed.png"
+      <img src="https://raw.githubusercontent.com/CODEAIResearch/CodeGenUncertainty/gt-pages/proposal.jpg"
            alt="Inference-time feedback loop with clarification, retrieval/verification, and tool/static-analysis augmentation feeding an abstention decision"
            style="width:100%;height:auto;border:0;">
       <figcaption style="font-size:0.9rem;color:#666;">
